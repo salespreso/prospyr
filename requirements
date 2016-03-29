@@ -1,0 +1,5 @@
+# reqs
+arrow==0.7.0
+marshmallow==2.6.1
+requests==2.9.1
+urlobject==2.4.0
