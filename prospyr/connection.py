@@ -9,13 +9,15 @@ import requests
 from urlobject import URLObject
 from urlobject.path import URLPath
 
+from prospyr.cache import InMemoryCache
 from prospyr.exceptions import MisconfiguredError
+from prospyr.util import seconds
 
 _connections = {}
 _default_url = 'https://api.prosperworks.com/developer_api/'
 
 
-def connect(email, token, url=_default_url, name='default'):
+def connect(email, token, url=_default_url, name='default', cache=None):
     """
     Create a connection to ProsperWorks using credentials `email` and `token`.
 
@@ -23,6 +25,9 @@ def connect(email, token, url=_default_url, name='default'):
     `prospyr.connection.get`. By default the connection is named 'default'. You
     can provide a different name to maintain multiple connections to
     ProsperWorks.
+
+    By default an in-memory URL cache is used. Argue
+    cache=prospyr.cache.NoOpCache() to disable caching.
     """
     if name in _connections:
         existing = _connections[name]
@@ -33,7 +38,7 @@ def connect(email, token, url=_default_url, name='default'):
 
     validate_url(url)
 
-    conn = Connection(url, email, token)
+    conn = Connection(url, email, token, cache=cache)
     _connections[name] = conn
     return conn
 
@@ -93,13 +98,12 @@ def url_join(base, *paths):
 
 class Connection(object):
 
-    _resources = None
-
-    def __init__(self, url, email, token, version='v1'):
+    def __init__(self, url, email, token, version='v1', cache=None):
         self.session = Connection._get_session(email, token)
         self.email = email
         self.base_url = URLObject(url)
         self.api_url = self.base_url.add_path_segment(version)
+        self.cache = InMemoryCache() if cache is None else cache
 
     def http_method(self, method, url, *args, **kwargs):
         """
@@ -130,8 +134,17 @@ class Connection(object):
     def __getattr__(self, name):
         """
         Turn HTTP verbs into http_method calls so e.g. conn.get(...) works.
+
+        Note that 'get' is special-cased to handle caching
         """
-        methods = 'get', 'post', 'put', 'patch', 'delete', 'options'
+        methods = 'post', 'put', 'patch', 'delete', 'options'
         if name in methods:
             return functools.partial(self.http_method, name)
         return super(Connection, self).__getattr__(name)
+
+    def get(self, url, *args, **kwargs):
+        cached = self.cache.get(url)
+        if cached is None:
+            cached = self.http_method('get', url, *args, **kwargs)
+            self.cache.set(url, cached, max_age=seconds(minutes=5))
+        return cached
