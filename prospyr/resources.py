@@ -42,14 +42,10 @@ class Resource(object):
 class Manager(object):
 
     def get(self, id, using='default'):
-        conn = connection.get(using)
-        path = self.resource_cls.Meta.detail_path
-        url = conn.build_absolute_url(path.format(id=id))
-        resp = conn.get(url)
-        if resp.status_code != codes.ok:
-            raise exceptions.ApiError(resp.status_code, resp.text)
-
-        return self.resource_cls(**resp.json())
+        instance = self.resource_cls()
+        instance.id = id
+        instance.read(using=using)
+        return instance
 
     def __get__(self, instance, cls):
         if instance:
