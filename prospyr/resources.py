@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-from itertools import count
+from itertools import count, islice, tee
 from logging import getLogger
 
 from marshmallow import Schema, fields
@@ -38,6 +38,9 @@ class Manager(object):
     def use(self, name):
         self.using = name
         return self
+
+    def all(self):
+        return self.filter()
 
     def filter(self, **query):
         return Search(manager=self, using=self.using).filter(**query)
@@ -127,19 +130,18 @@ class Search(object):
 
     def __init__(self, manager, params=None, order_field=None,
                  order_dir='asc', using='default'):
-        self._params = params
+        self._params = params or {}
         self._order_field = order_field
         self._order_dir = order_dir
         self._manager = manager
         self._resource_cls = manager.resource_cls
         self._using = using
-        self._cache = None
+        self._results = self._results_generator()
+
+    def all(self):
+        return self.filter()
 
     def filter(self, **query):
-        if not query:
-            raise ValueError('At least one parameter must be added '
-                             'before searching')
-
         if self._params is None:
             new_params = {}
         else:
@@ -165,14 +167,12 @@ class Search(object):
         path = self._manager.resource_cls.Meta.search_path
         return self._conn.build_absolute_url(path)
 
-    def _fetch(self):
+    def _results_generator(self):
         """
         Return Resource instances by querying ProsperWorks.
+
+        You should not normally need to use this method.
         """
-        if self._params is None:
-            raise ValueError('At least one parameter must be added '
-                             'before searching')
-        results = []
         query = self._params.copy()
         query['page_size'] = 100
 
@@ -187,44 +187,55 @@ class Search(object):
 
             # no (more) results
             page_data = resp.json()
+            logger.debug('%s results on page %s of %s',
+                         len(page_data), query['page_number'], self._url)
             if not page_data:
                 break
-            page_results = [self._resource_cls(**data) for data in page_data]
-            results.extend(page_results)
+
+            for data in page_data:
+                yield self._resource_cls.from_api_data(data)
 
             # detect last page of results
             if len(page_data) < query['page_size']:
                 break
 
-        return results
-
     def __iter__(self):
         """
-        Iterable search results. May evaluate search.
+        All resource instances matching this search. Results are cached.
+
+        Depending on page size, this could result in many requests.
         """
-        if self._cache is None:
-            self._cache = self._fetch()
-        return iter(self._cache)
+        self._results, cpy = tee(self._results)
+        return cpy
+
+    def __getitem__(self, index):
+        """
+        Fetch the nth of sliceth item from cache or ProsperWorks.
+
+        Fetching item N involves fetching items 0 through N-1. Depending on
+        page size and N, this could be many requests.
+        """
+        self._results, cpy = tee(self._results)
+        if type(index) is slice:
+            return list(islice(cpy, index.start, index.stop, index.step))
+        else:
+            try:
+                return next(islice(cpy, index, index+1))
+            except StopIteration:
+                raise IndexError('Search index out of range')
 
     def __repr__(self):
-        results = list(self)
-        first_10 = [repr(r) for r in results[:10]]
-        truncated = len(first_10) != len(self)
+        # show up to 5 results, then elipses. 6 results are fetched to
+        # accomodate the elipses logic.
+        first_6 = [str(r) for r in self[:6]]
+        truncated = len(first_6) == 6
         if truncated:
-            first_10.append('...')
+            first_6[6] = '...'
 
         return '<{cls} Search: [{results}]>'.format(
             cls=self._resource_cls.__name__,
-            results=', '.join(first_10)
+            results=', '.join(first_6)
         )
-
-    def __len__(self):
-        """
-        Count of search results. May evaluate search.
-        """
-        if self._cache is None:
-            self._cache = self._fetch()
-        return len(self._cache)
 
 
 class Related(object):
