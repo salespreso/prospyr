@@ -2,7 +2,9 @@
 
 from __future__ import division, print_function, unicode_literals
 
+import importlib
 import re
+from datetime import timedelta
 
 
 def _parts(string):
@@ -48,3 +50,42 @@ def to_camel(string):
 assert to_camel('FooBar') == 'FooBar'
 assert to_camel('foo-bar') == 'FooBar'
 assert to_camel('foo_bar') == 'FooBar'
+
+
+def import_dotted_path(path):
+    """
+    Return the module or name at `path`.
+    """
+    parts = path.split('.')
+    args = []
+    found = None
+
+    for l in range(1, len(parts)):
+        iterpath = '.'.join(parts[:l])
+        attr = parts[l]
+        args.append((iterpath, attr))
+
+    for path, attr in args:
+        try:
+            found = importlib.import_module(path)
+        except ImportError:
+            pass
+
+        if hasattr(found, attr):
+            found = getattr(found, attr)
+
+    if found is None:
+        raise ImportError('Cannot import %s', path)
+
+    return found
+
+
+def seconds(days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0,
+            hours=0, weeks=0):
+    """
+    Convenient time-unit-to-seconds converter. A thin wrapper around timedelta.
+    """
+    td = timedelta(days=days, seconds=seconds, microseconds=microseconds,
+                   milliseconds=milliseconds, minutes=minutes, hours=hours,
+                   weeks=weeks)
+    return td.total_seconds()
