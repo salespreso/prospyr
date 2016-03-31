@@ -155,6 +155,12 @@ class Search(object):
         dir = 'asc'
         if field.startswith('-'):
             dir, field = 'desc', field[1:]
+        available = self._resource_cls.Meta.order_fields
+        if field not in available:
+            raise ValueError(
+                'Cannot sort by `{field}`; try one of {valid}'
+                .format(field=field, valid=', '.join(sorted(available)))
+            )
         return Search(params=self._params, using=self._using,
                       manager=self._manager, order_dir=dir, order_field=field)
 
