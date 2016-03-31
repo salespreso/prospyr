@@ -142,10 +142,7 @@ class Search(object):
         return self.filter()
 
     def filter(self, **query):
-        if self._params is None:
-            new_params = {}
-        else:
-            new_params = self._params.copy()
+        new_params = self._params.copy()
         new_params.update(query)
         return Search(params=new_params, using=self._using,
                       manager=self._manager, order_field=self._order_field,
