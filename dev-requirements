@@ -1,6 +1,7 @@
 -r requirements
 
 # dev
+coverage==4.0.3
 flake8==2.5.4
 ipdb==0.9.0
 isort==4.2.2
