@@ -342,7 +342,7 @@ class Company(Resource, mixins.Readable):
 
     id = fields.Integer()
     name = fields.String(required=True)
-    address = fields.Nested(schema.AddressSchema)
+    address = fields.Nested(schema.AddressSchema, allow_none=True)
     assignee_id = fields.Integer(allow_none=True)
     assignee = Related(User)
     contact_type_id = fields.Integer(allow_none=True)

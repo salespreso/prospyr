@@ -2,8 +2,10 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+from collections import Mapping, namedtuple
+
 import arrow
-from marshmallow import Schema, fields, post_dump
+from marshmallow import Schema, fields, post_dump, post_load, pre_dump
 
 
 class TrimSchema(Schema):
@@ -32,6 +34,27 @@ class TrimSchema(Schema):
         return data
 
 
+class NamedTupleSchema(Schema):
+    """
+    (De)serialise to namedtuple instead of dict
+    """
+    def __init__(self, *args, **kwargs):
+        super(NamedTupleSchema, self).__init__(*args, **kwargs)
+        name = type(self).__name__.replace('Schema', '')
+        fields = self.declared_fields.keys()
+        self.namedtuple_class = namedtuple(name, fields)
+
+    @post_load
+    def to_namedtuple(self, data):
+        return self.namedtuple_class(**data)
+
+    @pre_dump
+    def from_namedtuple(self, obj):
+        if not isinstance(obj, Mapping):
+            return obj._asdict()
+        return obj
+
+
 class Unix(fields.Field):
     """
     datetime.datetime <-> unix timestamp
@@ -43,7 +66,7 @@ class Unix(fields.Field):
         return arrow.get(value).datetime
 
 
-class EmailSchema(Schema):
+class EmailSchema(NamedTupleSchema):
     email = fields.Email()
     category = fields.String()
 
@@ -69,8 +92,8 @@ class CustomFieldSchema(Schema):
 
 
 class AddressSchema(Schema):
-    street = fields.String()
-    city = fields.String()
-    state = fields.String()
-    postal_code = fields.String()
-    country = fields.String()
+    street = fields.String(allow_none=True)
+    city = fields.String(allow_none=True)
+    state = fields.String(allow_none=True)
+    postal_code = fields.String(allow_none=True)
+    country = fields.String(allow_none=True)
