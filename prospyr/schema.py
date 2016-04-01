@@ -3,7 +3,33 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import arrow
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, post_dump
+
+
+class TrimSchema(Schema):
+    """
+    A schema which does not dump "empty" fields.
+
+    ...where empty is defined as None for value fields, and an empty list for
+    collection fields.
+
+    This is in line with the behaviour ProsperWorks expects.
+    """
+
+    @post_dump
+    def clean_empty(self, data):
+        to_clean = []
+        for key, value in data.items():
+            collection = getattr(self.fields[key], 'many', False)
+            if collection and value == []:
+                to_clean.append(key)
+            elif value is None:
+                to_clean.append(key)
+
+        for key in to_clean:
+            data.pop(key)
+
+        return data
 
 
 class Unix(fields.Field):

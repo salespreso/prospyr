@@ -12,20 +12,33 @@ class Creatable(object):
     Allows creation of a Resource. Should be mixed in with that class.
     """
 
+    # pworks uses 200 OK for creates. 201 CREATED is here through optimism.
+    _create_success_codes = {codes.created, codes.ok}
+
     def create(self, using='default'):
         """
         Create a new instance of this Resource. True on success.
         """
-        conn = self._get_conn(using)
         if hasattr(self, 'id'):
-            raise ValueError('% cannot be created; it already '
-                             'has an id' & self._title)
-        resp = conn.post(self._list_url, data=dumps(self._data))
-        if resp.status_code == codes.created:
-            self.set_fields(resp.json())
+            raise ValueError(
+                '%s cannot be created; it already has an id' % self
+            )
+        conn = self._get_conn(using)
+        path = self.Meta.create_path
+
+        # pworks does not want Nones, despite handing them out.
+        data = {k: v for k, v in self._raw_data.items() if v is not None}
+
+        resp = conn.post(conn.build_absolute_url(path), json=data)
+
+        if resp.status_code in self._create_success_codes:
+            self._set_fields(resp.json())
             return True
+        elif resp.status_code == codes.unprocessable_entity:
+            error = resp.json()
+            raise ValueError(error['message'])
         else:
-            raise ApiError(resp.status_code, resp.content)
+            raise ApiError(resp.status_code, resp.text)
 
 
 class Readable(object):
@@ -61,24 +74,28 @@ class Updateable(object):
     Allows updating a Resource. Should be mixed in with that class.
     """
 
+    _update_success_codes = {codes.ok}
+
     def update(self, using='default'):
         """
         Update this Resource. True on success.
         """
-        try:
-            url = self._detail_url
-        except ValueError:
-            raise ValueError('% cannot be updated '
-                             'before it is saved' % self._title)
+        if getattr(self, 'id', None) is None:
+            raise ValueError('%s cannot be deleted before it is saved' % self)
         conn = self._get_conn(using)
-        data = self.schema.dump(self._data).data
-        resp = conn.put(url, json=data)
-        import ipdb; ipdb.set_trace()
-        if resp.status_code == codes.ok:
-            self.set_fields(resp.json())
+        path = self.Meta.detail_path.format(id=self.id)
+
+        # pworks does not want Nones, despite handing them out.
+        data = {k: v for k, v in self._raw_data.items() if v is not None}
+
+        resp = conn.put(conn.build_absolute_url(path), json=data)
+        if resp.status_code in self._update_success_codes:
             return True
+        elif resp.status_code == codes.unprocessable_entity:
+            error = resp.json()
+            raise ValueError(error['message'])
         else:
-            raise ApiError(resp.status_code, resp.content)
+            raise ApiError(resp.status_code, resp.text)
 
 
 class Deletable(object):
@@ -86,21 +103,21 @@ class Deletable(object):
     Allows deletion of a Resource. Should be mixed in with that class.
     """
 
+    _delete_success_codes = {codes.ok}
+
     def delete(self, using='default'):
         """
         Delete this Resource. True on success.
         """
-        try:
-            url = self._detail_url
-        except ValueError:
-            raise ValueError('% cannot be deleted '
-                             'before it is saved' % self._title)
+        if getattr(self, 'id', None) is None:
+            raise ValueError('%s cannot be deleted before it is saved' % self)
         conn = self._get_conn(using)
-        resp = conn.delete(url)
-        if resp.status_code == requests.codes.no_content:
+        path = self.Meta.detail_path.format(id=self.id)
+        resp = conn.delete(conn.build_absolute_url(path))
+        if resp.status_code in self._delete_success_codes:
             return True
         else:
-            raise ApiError(resp.status_code, resp.body)
+            raise ApiError(resp.status_code, resp.text)
 
 
 class ReadWritable(Creatable, Readable, Updateable, Deletable):

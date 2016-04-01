@@ -66,7 +66,11 @@ class ResourceMeta(type):
         for attr, value in list(attrs.items()):
             if isinstance(value, fields.Field):
                 schema_attrs[attr] = attrs.pop(attr)
-        schema_cls = type('%sSchema' % name, (Schema, ), schema_attrs)
+        schema_cls = type(
+            '%sSchema' % name,
+            (schema.TrimSchema, ),
+            schema_attrs
+        )
         attrs['Meta'].schema = schema_cls()
 
         return super_new(cls, name, bases, attrs)
@@ -78,6 +82,14 @@ class Resource(with_metaclass(ResourceMeta)):
 
     def __init__(self, **data):
         self._set_fields(data)
+
+    def validate(self):
+        schema = self.Meta.schema
+        attrs = set(dir(self)) & set(schema.declared_fields)
+        data = {k: getattr(self, k) for k in attrs}
+        errors = self.Meta.schema.validate(data)
+        if errors:
+            raise exceptions.ValidationError(errors)
 
     @classmethod
     def from_api_data(cls, data):
@@ -93,6 +105,15 @@ class Resource(with_metaclass(ResourceMeta)):
         instance = cls()
         instance._set_fields(data)
         return instance
+
+    def _load_api_data(self, data):
+        """
+        Update local instance with ProsperWorks data. Validates.
+        """
+        data, errors = self.Meta.schema.load(data)
+        if errors:
+            raise exceptions.ValidationError('Errors: %s' % repr(errors))
+        self._set_fields(data)
 
     def __repr__(self):
         classname = type(self).__name__
@@ -119,8 +140,15 @@ class Resource(with_metaclass(ResourceMeta)):
     @property
     def _raw_data(self):
         schema = self.Meta.schema
-        cleaned = {k: getattr(self, k) for k in schema.declared_fields}
-        return schema.dump(cleaned)
+        cleaned = {k: getattr(self, k) for k in schema.declared_fields
+                   if hasattr(self, k)}
+        data, errors = schema.dump(cleaned)
+        if errors:
+            raise exceptions.ValidationError(
+                'Could not serialize %s data: %s' % (self, repr(errors))
+            )
+
+        return data
 
 
 class Search(object):
@@ -233,7 +261,7 @@ class Search(object):
         first_6 = [str(r) for r in self[:6]]
         truncated = len(first_6) == 6
         if truncated:
-            first_6[6] = '...'
+            first_6.append('...')
 
         return '<{cls} Search: [{results}]>'.format(
             cls=self._resource_cls.__name__,
@@ -329,9 +357,11 @@ class Company(Resource, mixins.Readable):
     custom_fields = fields.Nested(schema.WebsiteSchema(many=True))
 
 
-class Person(Resource, mixins.Readable):
+class Person(Resource, mixins.Creatable, mixins.Readable, mixins.Deletable,
+             mixins.Updateable):
 
     class Meta(object):
+        create_path = 'people/'
         search_path = 'people/search/'
         detail_path = 'people/{id}/'
         order_fields = {
@@ -348,20 +378,27 @@ class Person(Resource, mixins.Readable):
 
     id = fields.Integer()
     name = fields.String(required=True)
-    address = fields.Nested(schema.AddressSchema)
+    address = fields.Nested(
+        schema.AddressSchema,
+        allow_none=True
+    )
     assignee_id = fields.Integer(allow_none=True)
     assignee = Related(User)
     company_id = fields.Integer(allow_none=True)
     company = Related(Company)
-    company_name = fields.String()
+    company_name = fields.String(allow_none=True, load_only=True)
     contact_type_id = fields.Integer(allow_none=True)
     details = fields.String(allow_none=True)
-    emails = fields.Nested(schema.EmailSchema(many=True))
-    phone_numbers = fields.Nested(schema.PhoneNumberSchema(many=True))
-    socials = fields.Nested(schema.SocialSchema(many=True))
+    emails = fields.Nested(
+        schema.EmailSchema,
+        many=True,
+        required=True,
+    )
+    phone_numbers = fields.Nested(schema.PhoneNumberSchema, many=True)
+    socials = fields.Nested(schema.SocialSchema, many=True)
     tags = fields.List(fields.String)
-    title = fields.String()
+    title = fields.String(allow_none=True)
     date_created = schema.Unix()
     date_modified = schema.Unix()
-    websites = fields.Nested(schema.CustomFieldSchema(many=True))
-    custom_fields = fields.Nested(schema.WebsiteSchema(many=True))
+    websites = fields.Nested(schema.CustomFieldSchema, many=True)
+    custom_fields = fields.Nested(schema.WebsiteSchema, many=True)
