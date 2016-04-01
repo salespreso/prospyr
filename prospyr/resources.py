@@ -106,14 +106,14 @@ class Resource(with_metaclass(ResourceMeta)):
         instance._set_fields(data)
         return instance
 
-    def _load_api_data(self, data):
-        """
-        Update local instance with ProsperWorks data. Validates.
-        """
-        data, errors = self.Meta.schema.load(data)
+    def _data_from_resp(self, resp):
+        data, errors = self.Meta.schema.load(resp.json())
         if errors:
-            raise exceptions.ValidationError('Errors: %s' % repr(errors))
-        self._set_fields(data)
+            raise exceptions.ValidationError(
+                'ProsperWorks delivered data which does not agree with the '
+                'local prospyr schema. Errors encountered: %s' % repr(errors)
+            )
+        return data
 
     def __repr__(self):
         classname = type(self).__name__

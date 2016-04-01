@@ -32,7 +32,8 @@ class Creatable(object):
         resp = conn.post(conn.build_absolute_url(path), json=data)
 
         if resp.status_code in self._create_success_codes:
-            self._set_fields(resp.json())
+            data = self._data_from_resp(resp)
+            self._set_fields(data)
             return True
         elif resp.status_code == codes.unprocessable_entity:
             error = resp.json()
@@ -46,6 +47,8 @@ class Readable(object):
     Allows reading of a Resource. Should be mixed in with that class.
     """
 
+    _read_success_codes = {codes.ok}
+
     def read(self, using='default'):
         """
         Read this Resource from remote API. True on success.
@@ -55,16 +58,10 @@ class Readable(object):
         conn = self._get_conn(using)
         path = self.Meta.detail_path.format(id=self.id)
         resp = conn.get(conn.build_absolute_url(path))
-        if resp.status_code != codes.ok:
+        if resp.status_code not in self._read_success_codes:
             raise ApiError(resp.status_code, resp.text)
 
-        data, errors = self.Meta.schema.loads(resp.text)
-        if errors:
-            raise ValidationError(
-                'ProsperWorks delivered data which does not agree with the '
-                'local prospyr schema. Errors encountered: %s' % repr(errors)
-            )
-
+        data = self._data_from_resp(resp)
         self._set_fields(data)
         return True
 
