@@ -42,6 +42,12 @@ class InMemoryCache(object):
             logger.debug('Cache miss for %s', key)
             return None
 
+    def clear(self, key):
+        if key in self._cache:
+            logger.debug('Cleared %s', key)
+            self._cache.pop(key)
+        return True
+
     def _maintenance(self):
         # expire any keys older than max_age
         to_expire = []
@@ -73,11 +79,14 @@ class NoOpCache(object):
     A cache class which doesn't cache anything.
     """
 
-    def meta(key):
+    def meta(self, key):
         return None
 
-    def set(key, value, max_age=0):
+    def set(self, key, value, max_age=0):
         return True
 
-    def get(key, value):
+    def get(self, key, value):
         return None
+
+    def clear(self, key):
+        return True

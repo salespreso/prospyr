@@ -135,9 +135,9 @@ class Connection(object):
         """
         Turn HTTP verbs into http_method calls so e.g. conn.get(...) works.
 
-        Note that 'get' is special-cased to handle caching
+        Note that 'get' and 'delete' are special-cased to handle caching
         """
-        methods = 'post', 'put', 'patch', 'delete', 'options'
+        methods = 'post', 'put', 'patch', 'options'
         if name in methods:
             return functools.partial(self.http_method, name)
         return super(Connection, self).__getattr__(name)
@@ -148,3 +148,9 @@ class Connection(object):
             cached = self.http_method('get', url, *args, **kwargs)
             self.cache.set(url, cached, max_age=seconds(minutes=5))
         return cached
+
+    def delete(self, url, *args, **kwargs):
+        resp = self.http_method('delete', url, *args, **kwargs)
+        if resp.ok:
+            self.cache.clear(url)
+        return resp
