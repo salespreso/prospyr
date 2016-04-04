@@ -2,24 +2,23 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-from itertools import count, islice, tee
 from logging import getLogger
 
-from marshmallow import Schema, fields
-from requests import codes
+from marshmallow import fields
 from six import with_metaclass
 
 from prospyr import connection, exceptions, mixins, schema
+from prospyr.search import ResultSet
 
 logger = getLogger(__name__)
 
 
 class Manager(object):
 
-    def get(self, id, using='default'):
+    def get(self, id):
         instance = self.resource_cls()
         instance.id = id
-        instance.read(using=using)
+        instance.read(using=self.using)
         return instance
 
     def __get__(self, instance, cls):
@@ -43,10 +42,12 @@ class Manager(object):
         return self.filter()
 
     def filter(self, **query):
-        return Search(manager=self, using=self.using).filter(**query)
+        return ResultSet(resource_cls=self.resource_cls,
+                         using=self.using).filter(**query)
 
     def order_by(self, field):
-        return Search(manager=self, using=self.using).order_by(field)
+        return ResultSet(resource_cls=self.resource_cls,
+                         using=self.using).order_by(field)
 
 
 class ResourceMeta(type):
@@ -140,133 +141,13 @@ class Resource(with_metaclass(ResourceMeta)):
     @property
     def _raw_data(self):
         schema = self.Meta.schema
-        cleaned = {k: getattr(self, k) for k in schema.declared_fields
-                   if hasattr(self, k)}
-        data, errors = schema.dump(cleaned)
+        data, errors = schema.dump(self)
         if errors:
             raise exceptions.ValidationError(
                 'Could not serialize %s data: %s' % (self, repr(errors))
             )
 
         return data
-
-
-class Search(object):
-    """
-    Immutable, lazy search results.
-    """
-
-    def __init__(self, manager, params=None, order_field=None,
-                 order_dir='asc', using='default'):
-        self._params = params or {}
-        self._order_field = order_field
-        self._order_dir = order_dir
-        self._manager = manager
-        self._resource_cls = manager.resource_cls
-        self._using = using
-        self._results = self._results_generator()
-
-    def all(self):
-        return self.filter()
-
-    def filter(self, **query):
-        new_params = self._params.copy()
-        new_params.update(query)
-        return Search(params=new_params, using=self._using,
-                      manager=self._manager, order_field=self._order_field,
-                      order_dir=self._order_dir)
-
-    def order_by(self, field):
-        dir = 'asc'
-        if field.startswith('-'):
-            dir, field = 'desc', field[1:]
-        available = self._resource_cls.Meta.order_fields
-        if field not in available:
-            raise ValueError(
-                'Cannot sort by `{field}`; try one of {valid}'
-                .format(field=field, valid=', '.join(sorted(available)))
-            )
-        return Search(params=self._params, using=self._using,
-                      manager=self._manager, order_dir=dir, order_field=field)
-
-    @property
-    def _conn(self):
-        return connection.get(self._using)
-
-    @property
-    def _url(self):
-        path = self._manager.resource_cls.Meta.search_path
-        return self._conn.build_absolute_url(path)
-
-    def _results_generator(self):
-        """
-        Return Resource instances by querying ProsperWorks.
-
-        You should not normally need to use this method.
-        """
-        query = self._params.copy()
-        query['page_size'] = 100
-
-        if self._order_field:
-            query['sort_by'] = self._order_field
-            query['sort_direction'] = self._order_dir
-
-        for query['page_number'] in count(1):
-            resp = self._conn.post(self._url, json=query)
-            if resp.status_code != codes.ok:
-                raise exceptions.ApiError(resp.status_code, resp.text)
-
-            # no (more) results
-            page_data = resp.json()
-            logger.debug('%s results on page %s of %s',
-                         len(page_data), query['page_number'], self._url)
-            if not page_data:
-                break
-
-            for data in page_data:
-                yield self._resource_cls.from_api_data(data)
-
-            # detect last page of results
-            if len(page_data) < query['page_size']:
-                break
-
-    def __iter__(self):
-        """
-        All resource instances matching this search. Results are cached.
-
-        Depending on page size, this could result in many requests.
-        """
-        self._results, cpy = tee(self._results)
-        return cpy
-
-    def __getitem__(self, index):
-        """
-        Fetch the nth of sliceth item from cache or ProsperWorks.
-
-        Fetching item N involves fetching items 0 through N-1. Depending on
-        page size and N, this could be many requests.
-        """
-        self._results, cpy = tee(self._results)
-        if type(index) is slice:
-            return list(islice(cpy, index.start, index.stop, index.step))
-        else:
-            try:
-                return next(islice(cpy, index, index+1))
-            except StopIteration:
-                raise IndexError('Search index out of range')
-
-    def __repr__(self):
-        # show up to 5 results, then elipses. 6 results are fetched to
-        # accomodate the elipses logic.
-        first_6 = [str(r) for r in self[:6]]
-        truncated = len(first_6) == 6
-        if truncated:
-            first_6.append('...')
-
-        return '<{cls} Search: [{results}]>'.format(
-            cls=self._resource_cls.__name__,
-            results=', '.join(first_6)
-        )
 
 
 class Related(object):

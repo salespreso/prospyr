@@ -5,7 +5,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 from collections import Mapping, namedtuple
 
 import arrow
-from marshmallow import Schema, fields, post_dump, post_load, pre_dump
+from arrow.parser import ParserError
+from marshmallow import (Schema, ValidationError, fields, post_dump, post_load,
+                         pre_dump)
 
 
 class TrimSchema(Schema):
@@ -60,10 +62,16 @@ class Unix(fields.Field):
     datetime.datetime <-> unix timestamp
     """
     def _serialize(self, value, attr, obj):
-        return arrow.get(value).timestamp
+        try:
+            return arrow.get(value).timestamp
+        except ParserError as ex:
+            raise ValidationError(ex)
 
     def _deserialize(self, value, attr, obj):
-        return arrow.get(value).datetime
+        try:
+            return arrow.get(value).datetime
+        except ParserError as ex:
+            raise ValidationError(ex)
 
 
 class EmailSchema(NamedTupleSchema):

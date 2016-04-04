@@ -16,9 +16,8 @@ class InMemoryCache(object):
     An in-memory cache. Keys are expired by count and age.
     """
 
-    _cache = {}
-
     def __init__(self, size=500):
+        self._cache = {}
         self._size = size
 
     def meta(self, key):
@@ -55,7 +54,7 @@ class InMemoryCache(object):
         for key, entry in self._cache.items():
             too_old = (
                 entry.max_age and
-                entry.created + entry.max_age < now
+                entry.created + entry.max_age <= now
             )
             if too_old:
                 to_expire.append(key)
@@ -85,7 +84,7 @@ class NoOpCache(object):
     def set(self, key, value, max_age=0):
         return True
 
-    def get(self, key, value):
+    def get(self, key):
         return None
 
     def clear(self, key):

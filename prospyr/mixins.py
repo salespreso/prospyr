@@ -2,9 +2,13 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+from logging import getLogger
+
 from requests import codes
 
-from prospyr.exceptions import ApiError, ValidationError
+from prospyr.exceptions import ApiError
+
+logger = getLogger(__name__)
 
 
 class Creatable(object):
@@ -25,11 +29,7 @@ class Creatable(object):
             )
         conn = self._get_conn(using)
         path = self.Meta.create_path
-
-        # pworks does not want Nones, despite handing them out.
-        data = {k: v for k, v in self._raw_data.items() if v is not None}
-
-        resp = conn.post(conn.build_absolute_url(path), json=data)
+        resp = conn.post(conn.build_absolute_url(path), json=self._raw_data)
 
         if resp.status_code in self._create_success_codes:
             data = self._data_from_resp(resp)
@@ -53,6 +53,7 @@ class Readable(object):
         """
         Read this Resource from remote API. True on success.
         """
+        logger.debug('Connected using %s', using)
         if getattr(self, 'id', None) is None:
             raise ValueError('%s must be saved before it is read' % self)
         conn = self._get_conn(using)
@@ -79,12 +80,13 @@ class Updateable(object):
         """
         if getattr(self, 'id', None) is None:
             raise ValueError('%s cannot be deleted before it is saved' % self)
+
+        # can't update IDs
+        data = self._raw_data
+        data.pop('id')
+
         conn = self._get_conn(using)
         path = self.Meta.detail_path.format(id=self.id)
-
-        # pworks does not want Nones, despite handing them out.
-        data = {k: v for k, v in self._raw_data.items() if v is not None}
-
         resp = conn.put(conn.build_absolute_url(path), json=data)
         if resp.status_code in self._update_success_codes:
             return True

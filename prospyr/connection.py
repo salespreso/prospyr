@@ -38,7 +38,7 @@ def connect(email, token, url=_default_url, name='default', cache=None):
 
     validate_url(url)
 
-    conn = Connection(url, email, token, cache=cache)
+    conn = Connection(url, email, token, cache=cache, name=name)
     _connections[name] = conn
     return conn
 
@@ -92,18 +92,20 @@ def url_join(base, *paths):
 
     for path in paths:
         path = URLPath(path)
-        return base.add_path(path)
+        base = base.add_path(path)
     return base
 
 
 class Connection(object):
 
-    def __init__(self, url, email, token, version='v1', cache=None):
+    def __init__(self, url, email, token, name='default', version='v1',
+                 cache=None):
         self.session = Connection._get_session(email, token)
         self.email = email
         self.base_url = URLObject(url)
         self.api_url = self.base_url.add_path_segment(version)
         self.cache = InMemoryCache() if cache is None else cache
+        self.name = name
 
     def http_method(self, method, url, *args, **kwargs):
         """

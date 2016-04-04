@@ -1,0 +1,73 @@
+{
+  "id": 1,
+  "name": "Jon Lee",
+  "address": {
+    "street": "221 Main Street Suite 1350",
+    "city": "San Francisco",
+    "state": "CA",
+    "postal_code": "94107",
+    "country": "US"
+  },
+  "assignee_id": 1,
+  "company_id": 1,
+  "company_name": "ProsperWorks",
+  "contact_type_id": 1,
+  "details": "Founder of the simple CRM for Google Apps",
+  "emails": [
+    {
+      "email": "support@prosperworks.com",
+      "category": "work"
+    },
+    {
+      "email": "support_1@prosperworks.com",
+      "category": "work"
+    }
+  ],
+  "phone_numbers": [
+    {
+      "number": "408-555-1212",
+      "category": "mobile"
+    },
+    {
+      "number": "415-555-1212",
+      "category": "work"
+    }
+  ],
+  "socials": [
+    {
+      "url": "https://www.linkedin.com/company/prosperworks-inc-",
+      "category": "linkedin"
+    },
+    {
+      "url": "https://www.facebook.com/ProsperWorks",
+      "category": "facebook"
+    }
+  ],
+  "tags": [
+    "High Value",
+    "New Business"
+  ],
+  "title": "Chief Executive Officer",
+  "websites": [
+    {
+      "url": "https://www.prosperworks.com",
+      "category": "work"
+    },
+    {
+      "url": "https://www.prosperworks.com/blog",
+      "category": "other"
+    }
+  ],
+  "date_created": 1420070400,
+  "date_modified": 1434585439,
+  "custom_fields": [
+    {
+      "custom_field_definition_id": 123,
+      "value": "string value"
+    },
+    {
+      "custom_field_definition_id": 456,
+      "value": "06/20/2015"
+    }
+  ]
+}
