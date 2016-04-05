@@ -3,7 +3,7 @@ sudo: false
 python:
   - 3.4
 install:
-  - pip install --upgrade pip
-  - pip install tox
+  - pip install --user --upgrade pip
+  - pip install --user tox
 script:
       tox
