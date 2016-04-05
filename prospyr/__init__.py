@@ -3,3 +3,4 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 from prospyr.connection import connect  # noqa
+from prospyr.version import VERSION  # noqa
