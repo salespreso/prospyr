@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import sys
 from logging import getLogger
 
 from marshmallow import fields
@@ -11,6 +12,15 @@ from prospyr import connection, exceptions, mixins, schema
 from prospyr.search import ResultSet
 
 logger = getLogger(__name__)
+
+
+def encode_typename(name):
+    """
+    Type names must be bytes in Python 2, unicode in Python 3
+    """
+    if sys.version_info < (3, 0, 0):
+        return name.encode('ascii')
+    return name
 
 
 class Manager(object):
@@ -68,7 +78,7 @@ class ResourceMeta(type):
             if isinstance(value, fields.Field):
                 schema_attrs[attr] = attrs.pop(attr)
         schema_cls = type(
-            '%sSchema' % name,
+            encode_typename('%sSchema' % name),
             (schema.TrimSchema, ),
             schema_attrs
         )
