@@ -5,6 +5,6 @@ python:
   - "3.4"
   - "3.5"
 install:
-  - pip install --user tox-travis
+  - pip install tox-travis
 script:
       tox
