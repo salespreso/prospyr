@@ -1,8 +1,18 @@
 Prospyr
 =======
 
-A Python client library for ProsperWorks. If you know Django, Prospyr will feel
-familiar.
+A Python client library for ProsperWorks.
+
+.. image:: https://api.travis-ci.org/salespreso/prospyr.svg?branch=master
+   :target: https://travis-ci.org/salespreso/prospyr
+   :alt: Prospyr builds
+
+.. image:: https://img.shields.io/pypi/v/prospyr.svg
+   :target: https://pypi.python.org/pypi/prospyr/
+   :alt: Prospyr on Pypi.
+
+Usage
+=====
 
 .. code-block:: python
 
@@ -28,3 +38,10 @@ familiar.
 
     # and deleting works too.
     art.delete()
+
+Installation
+============
+
+.. code-block:: shell
+
+    pip install prospyr
