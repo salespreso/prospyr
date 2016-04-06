@@ -11,19 +11,79 @@ from prospyr import connection, exceptions
 logger = getLogger(__name__)
 
 
-class ResultSet(object):
+class LazyCacheList(object):
+
+    def __init__(self):
+        self._results = self._results_generator()
+
+    def _results_generator(self):
+        """
+        Subclasses should implement a generator here.
+        """
+        raise NotImplementedError()
+
+    def __iter__(self):
+        """
+        Iterate resource instances. Results are cached.
+
+        Depending on page size, this could result in many requests.
+        """
+        self._results, cpy = tee(self._results)
+        return cpy
+
+    def __getitem__(self, index):
+        """
+        Fetch the nth of sliceth item from cache or ProsperWorks.
+
+        Fetching item N involves fetching items 0 through N-1. Depending on
+        page size and N, this could be many requests.
+        """
+        negative = (
+            type(index) is slice and (
+                (index.start is not None and index.start < 0) or
+                (index.stop is not None and index.stop < 0)
+            ) or
+            type(index) is not slice and index < 0
+        )
+        if negative:
+            raise IndexError('ResultSet does not support negative indexing')
+
+        self._results, cpy = tee(self._results)
+        if type(index) is slice:
+            return list(islice(cpy, index.start, index.stop, index.step))
+        else:
+            try:
+                return next(islice(cpy, index, index+1))
+            except StopIteration:
+                raise IndexError('ResultSet index out of range')
+
+    def __repr__(self):
+        # show up to 5 results, then elipses. 6 results are fetched to
+        # accomodate the elipses logic.
+        first_6 = [str(r) for r in self[:6]]
+        truncated = len(first_6) == 6
+        if truncated:
+            first_6 = first_6[0:5] + ['...']
+
+        return '<{name}: {results}>'.format(
+            name=type(self).__name__,
+            results=', '.join(first_6)
+        )
+
+
+class ResultSet(LazyCacheList):
     """
     Immutable, lazy search results.
     """
 
     def __init__(self, resource_cls, params=None, order_field=None,
                  order_dir='asc', using='default', page_size=100):
+        super(ResultSet, self).__init__()
         self._params = params or {}
         self._order_field = order_field
         self._order_dir = order_dir
         self._resource_cls = resource_cls
         self._using = using
-        self._results = self._results_generator()
         self._page_size = page_size
 
     def all(self):
@@ -73,7 +133,7 @@ class ResultSet(object):
         """
         Return Resource instances by querying ProsperWorks.
 
-        You should not normally need to use this method.
+        You should not normally need to call this method directly.
         """
         query = self._build_query()
 
@@ -98,49 +158,34 @@ class ResultSet(object):
             if len(page_data) < self._page_size:
                 break
 
-    def __iter__(self):
-        """
-        All resource instances matching this search. Results are cached.
 
-        Depending on page size, this could result in many requests.
-        """
-        self._results, cpy = tee(self._results)
-        return cpy
+class ListSet(LazyCacheList):
 
-    def __getitem__(self, index):
-        """
-        Fetch the nth of sliceth item from cache or ProsperWorks.
+    def __init__(self, resource_cls, using='default'):
+        super(ListSet, self).__init__()
+        self._resource_cls = resource_cls
+        self._using = using
 
-        Fetching item N involves fetching items 0 through N-1. Depending on
-        page size and N, this could be many requests.
-        """
-        negative = (
-            type(index) is slice and (
-                (index.start is not None and index.start < 0) or
-                (index.stop is not None and index.stop < 0)
-            ) or
-            type(index) is not slice and index < 0
-        )
-        if negative:
-            raise IndexError('ResultSet does not support negative indexing')
+    @property
+    def _conn(self):
+        return connection.get(self._using)
 
-        self._results, cpy = tee(self._results)
-        if type(index) is slice:
-            return list(islice(cpy, index.start, index.stop, index.step))
-        else:
-            try:
-                return next(islice(cpy, index, index+1))
-            except StopIteration:
-                raise IndexError('ResultSet index out of range')
+    def _results_generator(self):
+        path = self._resource_cls.Meta.list_path
+        url = self._conn.build_absolute_url(path)
+        resp = self._conn.get(url)
 
-    def __repr__(self):
-        # show up to 5 results, then elipses. 6 results are fetched to
-        # accomodate the elipses logic.
-        first_6 = [str(r) for r in self[:6]]
-        truncated = len(first_6) == 6
-        if truncated:
-            first_6 = first_6[0:5] + ['...']
+        if resp.status_code != codes.ok:
+            raise exceptions.ApiError(resp.status_code, resp.text)
 
-        return '<ResultSet: {results}>'.format(
-            results=', '.join(first_6)
-        )
+        for data in resp.json():
+            yield self._resource_cls.from_api_data(data)
+
+    def all(self):
+        return self
+
+    def filter(self, *args, **kwargs):
+        raise NotImplementedError('ListSet does not support filtering')
+
+    def order_by(self, *args, **kwargs):
+        raise NotImplementedError('ListSet does not support ordering')

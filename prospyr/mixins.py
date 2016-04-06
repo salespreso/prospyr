@@ -32,7 +32,7 @@ class Creatable(object):
         resp = conn.post(conn.build_absolute_url(path), json=self._raw_data)
 
         if resp.status_code in self._create_success_codes:
-            data = self._data_from_resp(resp)
+            data = self._load_raw(resp.json())
             self._set_fields(data)
             return True
         elif resp.status_code == codes.unprocessable_entity:
@@ -62,7 +62,7 @@ class Readable(object):
         if resp.status_code not in self._read_success_codes:
             raise ApiError(resp.status_code, resp.text)
 
-        data = self._data_from_resp(resp)
+        data = self._load_raw(resp.json())
         self._set_fields(data)
         return True
 

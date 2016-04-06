@@ -4,10 +4,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 from collections import Mapping, namedtuple
 
-import arrow
-from arrow.parser import ParserError
-from marshmallow import (Schema, ValidationError, fields, post_dump, post_load,
-                         pre_dump)
+from marshmallow import Schema, fields, post_dump, post_load, pre_dump
 
 
 class TrimSchema(Schema):
@@ -57,23 +54,6 @@ class NamedTupleSchema(Schema):
         return obj
 
 
-class Unix(fields.Field):
-    """
-    datetime.datetime <-> unix timestamp
-    """
-    def _serialize(self, value, attr, obj):
-        try:
-            return arrow.get(value).timestamp
-        except ParserError as ex:
-            raise ValidationError(ex)
-
-    def _deserialize(self, value, attr, obj):
-        try:
-            return arrow.get(value).datetime
-        except ParserError as ex:
-            raise ValidationError(ex)
-
-
 class EmailSchema(NamedTupleSchema):
     email = fields.Email()
     category = fields.String()
@@ -105,3 +85,9 @@ class AddressSchema(Schema):
     state = fields.String(allow_none=True)
     postal_code = fields.String(allow_none=True)
     country = fields.String(allow_none=True)
+
+
+class PipelineStageSchema(NamedTupleSchema):
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    win_probability = fields.Integer()

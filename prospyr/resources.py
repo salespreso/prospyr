@@ -5,11 +5,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 import sys
 from logging import getLogger
 
-from marshmallow import fields
-from six import with_metaclass
+from marshmallow import fields, validate
+from six import string_types, with_metaclass
 
 from prospyr import connection, exceptions, mixins, schema
-from prospyr.search import ResultSet
+from prospyr.fields import NestedResource, Unix
+from prospyr.search import ListSet, ResultSet
+from prospyr.util import import_dotted_path
 
 logger = getLogger(__name__)
 
@@ -60,16 +62,48 @@ class Manager(object):
                          using=self.using).order_by(field)
 
 
+class ListOnlyManager(Manager):
+
+    _results_by_id = None
+
+    def results_by_id(self, force_refresh=False):
+        if self._results_by_id is None or force_refresh is True:
+            rs = self.all()
+            self._results_by_id = {r.id: r for r in rs}
+        return self._results_by_id
+
+    def get(self, id):
+        result = self.results_by_id().get(id)
+        if result is None:
+            result = self.results_by_id(force_refresh=True).get(id)
+            if result is None:
+                raise KeyError('Record with id `%s` does not exist' % id)
+        return result
+
+    def all(self):
+        return ListSet(resource_cls=self.resource_cls, using=self.using)
+
+
 class ResourceMeta(type):
     """
     Metaclass of all Resources.
     """
+    class Meta(object):
+        abstract = True
+
     def __new__(cls, name, bases, attrs):
         super_new = super(ResourceMeta, cls).__new__
 
         # only do metaclass tomfoolery for resource *subclasses*
-        parents = [b for b in bases if issubclass(b, Resource)]
-        if not parents:
+        #  parents = []
+        #  for base in bases:
+            #  if hasattr(base, 'Meta') and getattr(base.Meta, 'abstract')
+        #  parents = [b for b in bases if issubclass(b, Resource)]
+        #  if not parents:
+        subclasses = {b for b in bases if issubclass(b, Resource)}
+        #  subclasses = subclasses - {Resource, SecondaryResource}
+        requires_schema = any(getattr(s.Meta, 'abstract', True) for s in subclasses)
+        if not requires_schema:
             return super_new(cls, name, bases, attrs)
 
         # move marshmallow fields to a new Schema subclass on cls.Meta
@@ -77,6 +111,8 @@ class ResourceMeta(type):
         for attr, value in list(attrs.items()):
             if isinstance(value, fields.Field):
                 schema_attrs[attr] = attrs.pop(attr)
+            elif hasattr(value, 'modify_schema_attrs'):
+                schema_attrs = value.modify_schema_attrs(attr, schema_attrs)
         schema_cls = type(
             encode_typename('%sSchema' % name),
             (schema.TrimSchema, ),
@@ -90,6 +126,9 @@ class ResourceMeta(type):
 class Resource(with_metaclass(ResourceMeta)):
 
     objects = Manager()
+
+    class meta:
+        abstract = True
 
     def __init__(self, **data):
         self._set_fields(data)
@@ -107,22 +146,19 @@ class Resource(with_metaclass(ResourceMeta)):
         """
         Alternate constructor. Build instance from ProsperWorks API data.
         """
-        data, errors = cls.Meta.schema.load(data)
-        if errors:
-            raise exceptions.ValidationError(
-                'ProsperWorks delivered data which does not agree with the '
-                'local prospyr schema. Errors encountered: %s' % repr(errors)
-            )
+        data = cls._load_raw(data)
         instance = cls()
         instance._set_fields(data)
         return instance
 
-    def _data_from_resp(self, resp):
-        data, errors = self.Meta.schema.load(resp.json())
+    @classmethod
+    def _load_raw(cls, raw_data):
+        data, errors = cls.Meta.schema.load(raw_data)
         if errors:
             raise exceptions.ValidationError(
                 'ProsperWorks delivered data which does not agree with the '
-                'local prospyr schema. Errors encountered: %s' % repr(errors)
+                'local Prospyr schema. This is probably a Prospyr bug. '
+                'Errors encountered: %s' % repr(errors)
             )
         return data
 
@@ -160,13 +196,28 @@ class Resource(with_metaclass(ResourceMeta)):
         return data
 
 
+class SecondaryResource(Resource):
+
+    class Meta:
+        abstract = True
+
+    objects = ListOnlyManager()
+
+
 class Related(object):
     """
     Behave as a related object when an attribute of a Resource.
     """
 
-    def __init__(self, related_cls):
-        self.related_cls = related_cls
+    def __init__(self, related_cls, required=False):
+        self._related_cls = related_cls
+        self.required = required
+
+    @property
+    def related_cls(self):
+        if isinstance(self._related_cls, string_types):
+            self._related_cls = import_dotted_path(self._related_cls)
+        return self._related_cls
 
     def __get__(self, instance, cls):
         if instance is None:
@@ -197,6 +248,12 @@ class Related(object):
                 return attr
         else:
             raise AttributeError('Cannot find self')
+
+    def modify_schema_attrs(self, self_attr, schema_attrs):
+        allow_none = (self.required is False)
+        field = fields.Integer(allow_none=allow_none)
+        schema_attrs['%s_id' % self_attr] = field
+        return schema_attrs
 
 
 class User(Resource, mixins.Readable):
@@ -242,14 +299,13 @@ class Company(Resource, mixins.Readable):
     phone_numbers = fields.Nested(schema.PhoneNumberSchema(many=True))
     socials = fields.Nested(schema.SocialSchema(many=True))
     tags = fields.List(fields.String)
-    date_created = schema.Unix()
-    date_modified = schema.Unix()
+    date_created = Unix()
+    date_modified = Unix()
     websites = fields.Nested(schema.CustomFieldSchema(many=True))
     custom_fields = fields.Nested(schema.WebsiteSchema(many=True))
 
 
-class Person(Resource, mixins.Creatable, mixins.Readable, mixins.Deletable,
-             mixins.Updateable):
+class Person(Resource, mixins.ReadWritable):
 
     class Meta(object):
         create_path = 'people/'
@@ -289,7 +345,93 @@ class Person(Resource, mixins.Creatable, mixins.Readable, mixins.Deletable,
     socials = fields.Nested(schema.SocialSchema, many=True)
     tags = fields.List(fields.String)
     title = fields.String(allow_none=True)
-    date_created = schema.Unix()
-    date_modified = schema.Unix()
+    date_created = Unix()
+    date_modified = Unix()
     websites = fields.Nested(schema.CustomFieldSchema, many=True)
     custom_fields = fields.Nested(schema.WebsiteSchema, many=True)
+
+
+class LossReason(SecondaryResource, mixins.Readable):
+    class Meta(object):
+        list_path = 'loss_reasons'
+
+    id = fields.Integer()
+    name = fields.String(required=True)
+
+
+class PipelineStage(SecondaryResource, mixins.Readable):
+    class Meta(object):
+        list_path = 'pipeline_stages'
+
+    id = fields.Integer()
+    name = fields.String(required=True)
+    pipeline = Related('prospyr.resources.Pipeline')
+
+
+class Pipeline(SecondaryResource, mixins.Readable):
+    class Meta(object):
+        list_path = 'pipelines'
+
+    id = fields.Integer()
+    name = fields.String(required=True)
+    stages = NestedResource(
+        PipelineStage,
+        many=True,
+    )
+
+
+class CustomerSource(SecondaryResource, mixins.Readable):
+    class Meta(object):
+        list_path = 'customer_sources'
+
+    id = fields.Integer()
+    name = fields.String(required=True)
+
+
+class Opportunity(Resource, mixins.ReadWritable):
+    class Meta(object):
+        create_path = 'opportunities/'
+        search_path = 'opportunities/search/'
+        detail_path = 'opportunities/{id}/'
+        order_fields = {
+            'name',
+            'assignee',
+            'company_name',
+            'customer_source_id',
+            'monetary_value',
+            'primary_contact',
+            'priority',
+            'status',
+            'inactive_days',
+            'last_interaction',
+            'interaction_count',
+            'date_created',
+            'date_modified',
+        }
+
+    id = fields.Integer()
+    name = fields.String(required=True)
+    company_name = fields.String(allow_none=True, load_only=True)
+    close_date = Unix()
+    details = fields.String(allow_none=True)
+    monetary_value = fields.Integer(allow_none=True)
+
+    assignee = Related(User)
+    company = Related(Company)
+    loss_reason = Related(LossReason)
+    customer_source = Related(CustomerSource)
+    pipeline = Related(Pipeline)
+    pipeline_stage = Related(PipelineStage)
+    primary_contact = Related(Person, required=True)
+    priority = fields.String(
+        allow_none=True,
+        validate=validate.OneOf(choices=('None', 'Low', 'Medium', 'High')),
+    )
+    stage = fields.String(
+        allow_none=True,
+        validate=validate.OneOf(choices=('Open', 'Won', 'Lost', 'Abandoned')),
+    )
+    tags = fields.List(fields.String)
+    win_probability = fields.Integer()
+    date_created = Unix()
+    date_modified = Unix()
