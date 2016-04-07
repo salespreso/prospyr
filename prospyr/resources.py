@@ -63,6 +63,12 @@ class Manager(object):
 
 
 class ListOnlyManager(Manager):
+    """
+    Manage a resource which has only a list URL.
+
+    Some ProsperWorks resources are list-only; they have no search or detail
+    URLs. The get() method is simulated. filtering and ordering is disabled.
+    """
 
     _results_by_id = None
 
@@ -75,6 +81,7 @@ class ListOnlyManager(Manager):
     def get(self, id):
         result = self.results_by_id().get(id)
         if result is None:
+            # perhaps our cache is stale?
             result = self.results_by_id(force_refresh=True).get(id)
             if result is None:
                 raise KeyError('Record with id `%s` does not exist' % id)
@@ -87,6 +94,8 @@ class ListOnlyManager(Manager):
 class ResourceMeta(type):
     """
     Metaclass of all Resources.
+
+    Pulls marshmallow schema fields onto a Schema definition.
     """
     class Meta(object):
         abstract = True
@@ -94,14 +103,8 @@ class ResourceMeta(type):
     def __new__(cls, name, bases, attrs):
         super_new = super(ResourceMeta, cls).__new__
 
-        # only do metaclass tomfoolery for resource *subclasses*
-        #  parents = []
-        #  for base in bases:
-            #  if hasattr(base, 'Meta') and getattr(base.Meta, 'abstract')
-        #  parents = [b for b in bases if issubclass(b, Resource)]
-        #  if not parents:
+        # only do metaclass tomfoolery for concrete resources.
         subclasses = {b for b in bases if issubclass(b, Resource)}
-        #  subclasses = subclasses - {Resource, SecondaryResource}
         requires_schema = any(getattr(s.Meta, 'abstract', True) for s in subclasses)
         if not requires_schema:
             return super_new(cls, name, bases, attrs)
@@ -124,7 +127,11 @@ class ResourceMeta(type):
 
 
 class Resource(with_metaclass(ResourceMeta)):
+    """
+    Superclass of all ProsperWorks API resources.
 
+    This class should be mixed with mixins.Readable, mixins.Creatable etc.
+    """
     objects = Manager()
 
     class meta:
@@ -197,7 +204,9 @@ class Resource(with_metaclass(ResourceMeta)):
 
 
 class SecondaryResource(Resource):
-
+    """
+    Secondary resources have only a list URL.
+    """
     class Meta:
         abstract = True
 
@@ -263,7 +272,6 @@ class User(Resource, mixins.Readable):
     email = fields.Email(required=True)
 
     class Meta(object):
-        # schema = schema.UserSchema()
         search_path = 'users/search/'
         detail_path = 'users/{id}/'
 
@@ -296,13 +304,13 @@ class Company(Resource, mixins.Readable):
     contact_type_id = fields.Integer(allow_none=True)
     details = fields.String(allow_none=True)
     email_domain = fields.String(allow_none=True)
-    phone_numbers = fields.Nested(schema.PhoneNumberSchema(many=True))
-    socials = fields.Nested(schema.SocialSchema(many=True))
+    phone_numbers = fields.Nested(schema.PhoneNumberSchema, many=True)
+    socials = fields.Nested(schema.SocialSchema, many=True)
     tags = fields.List(fields.String)
     date_created = Unix()
     date_modified = Unix()
-    websites = fields.Nested(schema.CustomFieldSchema(many=True))
-    custom_fields = fields.Nested(schema.WebsiteSchema(many=True))
+    websites = fields.Nested(schema.CustomFieldSchema, many=True)
+    custom_fields = fields.Nested(schema.WebsiteSchema, many=True)
 
 
 class Person(Resource, mixins.ReadWritable):
