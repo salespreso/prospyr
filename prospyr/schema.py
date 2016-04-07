@@ -59,17 +59,17 @@ class EmailSchema(NamedTupleSchema):
     category = fields.String()
 
 
-class WebsiteSchema(Schema):
-    website = fields.Url()
+class WebsiteSchema(NamedTupleSchema):
+    url = fields.String()  # PW does not validate URLs so neither do we
     category = fields.String()
 
 
-class SocialSchema(Schema):
-    website = fields.Url()
+class SocialSchema(NamedTupleSchema):
+    url = fields.String()  # PW does not validate URLs so neither do we
     category = fields.String()
 
 
-class PhoneNumberSchema(Schema):
+class PhoneNumberSchema(NamedTupleSchema):
     number = fields.String()
     category = fields.String()
 

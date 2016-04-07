@@ -347,8 +347,8 @@ class Person(Resource, mixins.ReadWritable):
     title = fields.String(allow_none=True)
     date_created = Unix()
     date_modified = Unix()
-    websites = fields.Nested(schema.CustomFieldSchema, many=True)
-    custom_fields = fields.Nested(schema.WebsiteSchema, many=True)
+    custom_fields = fields.Nested(schema.CustomFieldSchema, many=True)
+    websites = fields.Nested(schema.WebsiteSchema, many=True)
 
 
 class LossReason(SecondaryResource, mixins.Readable):
