@@ -5,11 +5,15 @@ A Python client library for ProsperWorks.
 
 .. image:: https://api.travis-ci.org/salespreso/prospyr.svg?branch=master
    :target: https://travis-ci.org/salespreso/prospyr
-   :alt: Prospyr builds
+   :alt: Prospyr builds.
 
 .. image:: https://img.shields.io/pypi/v/prospyr.svg
    :target: https://pypi.python.org/pypi/prospyr/
    :alt: Prospyr on Pypi.
+
+.. image:: https://img.shields.io/codecov/c/github/salespreso/prospyr.svg
+   :target: https://codecov.io/github/salespreso/prospyr
+   :alt: Prospyr on Codecov.
 
 Prospyr runs on Python 2.7 or Python 3.4+. 
 
