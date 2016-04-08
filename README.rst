@@ -15,6 +15,10 @@ A Python client library for ProsperWorks.
    :target: https://codecov.io/github/salespreso/prospyr
    :alt: Prospyr on Codecov.
 
+.. image:: https://landscape.io/github/salespreso/prospyr/master/landscape.svg?style=flat
+   :target: https://landscape.io/github/salespreso/prospyr/master
+   :alt: Code Health
+
 Prospyr runs on Python 2.7 or Python 3.4+. 
 
 Installation
