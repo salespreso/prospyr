@@ -83,9 +83,9 @@ cache instance when connecting to ProsperWorks to change this behaviour.
 You can also substitute your own custom cache here to use e.g. Redis or
 memcached.
 
-Prospyr also supports multiple named connections. Provide a `name='...'`
-argument when calling `connect()` and refer to the connection when interacting
-with the API later, e.g. `Person.objects.get(id=1, using='...')`.
+Prospyr also supports multiple named connections. Provide a ``name='...'``
+argument when calling ``connect()`` and refer to the connection when
+interacting with the API later, e.g. ``Person.objects.get(id=1, using='...')``.
 
 Create
 ------
@@ -115,8 +115,8 @@ Read
 ----
 
 There are two ways to read a single record from ProsperWorks. A new instance
-can be fetched using the resource's `objects.get()` method, or you can call
-`read()` on an existing instance to have its attributes refreshed.
+can be fetched using the resource's ``objects.get()`` method, or you can call
+``read()`` on an existing instance to have its attributes refreshed.
 
 .. code-block:: python
 
@@ -198,11 +198,11 @@ ordered. However, Prospyr does check that the fields you argue are correct.
     rs[200]
     >>> <Person: Alfons Tundra>
 
-Once `ResultSet` instances have been evaluated they are cached for their
-lifetime. However, the `filter()` and `order_by()` methods return new
-`ResultSet` instances which require fresh evaluation. While you are dealing
-with a single `ResultSet`, it is safe to iterate and slice it as many times as
-necessary.
+Once ``ResultSet`` instances have been evaluated they are cached for their
+lifetime. However, the ``filter()`` and ``order_by()`` methods return new
+``ResultSet`` instances which require fresh evaluation. While you are dealing
+with a single ``ResultSet``, it is safe to iterate and slice it as many times
+as necessary.
 
 
 Filtering
@@ -214,8 +214,8 @@ used. Prospyr does *not* currently validate your filter arguments, and note
 that ProsperWorks does not either; if you make an invalid filter argument,
 results will be returned as though you had not filtered at all.
 
-Multiple filters are logically ANDed together. A single call to `filter()` with
-many parameters is equivalent to many calls with single parameters.
+Multiple filters are logically ANDed together. A single call to ``filter()``
+with many parameters is equivalent to many calls with single parameters.
 
 
 .. code-block:: python
@@ -232,12 +232,12 @@ many parameters is equivalent to many calls with single parameters.
     )
 
 As with ordering, filtered results are evaluated lazily and then cached
-indefinitely. Re-ordering or re-filtering results in a new `ResultSet` which
+indefinitely. Re-ordering or re-filtering results in a new ``ResultSet`` which
 requires fresh evaluation.
 
 ProsperWorks' “Secondary Resources”, such as Pipeline Stages, cannot be
-filtered or ordered. These resources use `ListSet` rather than `ResultSet`
-instances; these only support the `all()` method:
+filtered or ordered. These resources use ``ListSet`` rather than ``ResultSet``
+instances; these only support the ``all()`` method:
 
 .. code-block:: python
 
@@ -245,6 +245,7 @@ instances; these only support the `all()` method:
 
     PipelineStage.objects.all()
     >>> <ListSet: Qualifying, Quoted, ...>
+
 
 Tests
 =====
