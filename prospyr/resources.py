@@ -27,6 +27,8 @@ def encode_typename(name):
 
 class Manager(object):
 
+    _search_cls = ResultSet
+
     def get(self, id):
         instance = self.resource_cls()
         instance.id = id
@@ -54,12 +56,14 @@ class Manager(object):
         return self.filter()
 
     def filter(self, **query):
-        return ResultSet(resource_cls=self.resource_cls,
-                         using=self.using).filter(**query)
+        fresh = self._search_cls(resource_cls=self.resource_cls,
+                                 using=self.using)
+        return fresh.filter(**query)
 
     def order_by(self, field):
-        return ResultSet(resource_cls=self.resource_cls,
-                         using=self.using).order_by(field)
+        fresh = self._search_cls(resource_cls=self.resource_cls,
+                                 using=self.using)
+        return fresh.order_by(field)
 
 
 class ListOnlyManager(Manager):
@@ -71,6 +75,7 @@ class ListOnlyManager(Manager):
     """
 
     _results_by_id = None
+    _search_cls = ListSet
 
     def results_by_id(self, force_refresh=False):
         if self._results_by_id is None or force_refresh is True:
@@ -88,7 +93,8 @@ class ListOnlyManager(Manager):
         return result
 
     def all(self):
-        return ListSet(resource_cls=self.resource_cls, using=self.using)
+        return self._search_cls(resource_cls=self.resource_cls,
+                                using=self.using)
 
 
 class ResourceMeta(type):
