@@ -111,7 +111,8 @@ class ResourceMeta(type):
 
         # only do metaclass tomfoolery for concrete resources.
         subclasses = {b for b in bases if issubclass(b, Resource)}
-        requires_schema = any(getattr(s.Meta, 'abstract', True) for s in subclasses)
+        requires_schema = any(getattr(s.Meta, 'abstract', True)
+                              for s in subclasses)
         if not requires_schema:
             return super_new(cls, name, bases, attrs)
 
@@ -127,6 +128,9 @@ class ResourceMeta(type):
             (schema.TrimSchema, ),
             schema_attrs
         )
+        if 'Meta' not in attrs:
+            raise AttributeError('Class %s must define a `class Meta`' %
+                                 cls.__name__)
         attrs['Meta'].schema = schema_cls()
 
         return super_new(cls, name, bases, attrs)
