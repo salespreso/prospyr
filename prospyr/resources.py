@@ -285,9 +285,10 @@ class User(Resource, mixins.Readable):
         return '{self.name} ({self.email})'.format(self=self)
 
 
-class Company(Resource, mixins.Readable):
+class Company(Resource, mixins.ReadWritable):
 
     class Meta(object):
+        create_path = 'companies/'
         search_path = 'companies/search/'
         detail_path = 'companies/{id}/'
         order_fields = {
