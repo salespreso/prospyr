@@ -26,19 +26,35 @@ class Unix(fields.Field):
 
 
 class NestedResource(fields.Field):
+    """
+    Represent a nested data structure as a Resource instance.
 
-    def __init__(self, resource_cls, default=missing_, many=False, **kwargs):
+    If many=True, a listlike data structure is expected instead. If
+    id_only=True, only the id field must exist in the nested representation;
+    the remainder of the Resource's data will be fetched.
+    """
+
+    def __init__(self, resource_cls, default=missing_, many=False,
+                 id_only=False, **kwargs):
         self.resource_cls = resource_cls
         self.schema = type(resource_cls.Meta.schema)
         self.many = many
+        self.id_only = id_only
         super(NestedResource, self).__init__(default=default, many=many,
                                              **kwargs)
 
     def _deserialize(self, value, attr, data):
-        if self.many:
-            return [self.resource_cls.from_api_data(v) for v in value]
-        else:
-            return self.resource_cls.from_api_data(value)
+        if not self.many:
+            value = [value]
+
+        resources = []
+        for v in value:
+            if self.id_only:
+                resources.append(self.resource_cls.objects.get(id=v['id']))
+            else:
+                resources.append(self.resource_cls.from_api_data(v))
+
+        return resources if self.many else resources[0]
 
     def _serialize(self, value, attr, data):
         if self.many:
