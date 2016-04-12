@@ -54,7 +54,6 @@ def import_dotted_path(path):
         args.append((iterpath, attr))
 
     for path, attr in args:
-        print(path, attr)
         try:
             found = importlib.import_module(path)
         except ImportError:
