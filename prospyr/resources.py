@@ -151,7 +151,7 @@ class Resource(with_metaclass(ResourceMeta)):
     """
     objects = Manager()
 
-    class meta:
+    class Meta:
         abstract = True
 
     def __init__(self, **data):
@@ -284,13 +284,13 @@ class Related(object):
 
 class User(Resource, mixins.Readable):
 
-    id = fields.Integer()
-    name = fields.String(required=True)
-    email = fields.Email(required=True)
-
     class Meta(object):
         search_path = 'users/search/'
         detail_path = 'users/{id}/'
+
+    id = fields.Integer()
+    name = fields.String(required=True)
+    email = fields.Email(required=True)
 
     def __str__(self):
         return '{self.name} ({self.email})'.format(self=self)
