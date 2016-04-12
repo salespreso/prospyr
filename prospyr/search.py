@@ -195,6 +195,10 @@ class ActivityTypeListSet(ListSet):
     """
     Special-case ActivityType's listing actually being two seperate lists.
     """
+    def __init__(self, using='default'):
+        from prospyr.resources import ActivityType
+        parent = super(ActivityTypeListSet, self)
+        parent.__init__(resource_cls=ActivityType, using=using)
 
     def _results_generator(self):
         path = self._resource_cls.Meta.list_path
