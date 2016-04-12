@@ -189,3 +189,22 @@ class ListSet(LazyCacheList):
 
     def order_by(self, *args, **kwargs):
         raise NotImplementedError('ListSet does not support ordering')
+
+
+class ActivityTypeListSet(ListSet):
+    """
+    Special-case ActivityType's listing actually being two seperate lists.
+    """
+
+    def _results_generator(self):
+        path = self._resource_cls.Meta.list_path
+        url = self._conn.build_absolute_url(path)
+        resp = self._conn.get(url)
+
+        if resp.status_code != codes.ok:
+            raise exceptions.ApiError(resp.status_code, resp.text)
+
+        raw_data = resp.json()
+        rows = raw_data['user'] + raw_data['system']  # combine the two lists.
+        for data in rows:
+            yield self._resource_cls.from_api_data(data)

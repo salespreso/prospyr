@@ -9,9 +9,9 @@ from marshmallow import fields, validate
 from six import string_types, with_metaclass
 
 from prospyr import connection, exceptions, mixins, schema
-from prospyr.fields import NestedResource, Unix
-from prospyr.search import ListSet, ResultSet
-from prospyr.util import import_dotted_path
+from prospyr.fields import NestedIdentifiedResource, NestedResource, Unix
+from prospyr.search import ActivityTypeListSet, ListSet, ResultSet
+from prospyr.util import import_dotted_path, to_snake
 
 logger = getLogger(__name__)
 
@@ -95,6 +95,13 @@ class ListOnlyManager(Manager):
     def all(self):
         return self._search_cls(resource_cls=self.resource_cls,
                                 using=self.using)
+
+
+class ActivityTypeManager(ListOnlyManager):
+    """
+    Special-case ActivityType's listing actually being two seperate lists.
+    """
+    _search_cls = ActivityTypeListSet
 
 
 class ResourceMeta(type):
@@ -454,6 +461,23 @@ class Opportunity(Resource, mixins.ReadWritable):
     win_probability = fields.Integer()
     date_created = Unix()
     date_modified = Unix()
+
+
+class ActivityType(SecondaryResource, mixins.Readable):
+    class Meta(object):
+        list_path = 'activity_types'
+
+    objects = ActivityTypeManager()
+
+    id = fields.Integer(required=True)
+    category = fields.String(
+        validate=validate.OneOf(choices=('user', 'system')),
+    )
+    name = fields.String()
+    is_disabled = fields.Boolean()
+    count_as_interaction = fields.Boolean()
+
+
 class Identifier(SecondaryResource):
 
     valid_types = {'lead', 'person', 'opportunity', 'company'}
@@ -491,3 +515,19 @@ class Identifier(SecondaryResource):
         )
 
 
+class Activity(Resource, mixins.ReadWritable):
+    class Meta:
+        create_path = 'activities/'
+        search_path = 'activities/search/'
+        detail_path = 'activities/{id}/'
+
+    id = fields.Integer()
+    type = NestedResource(ActivityType, id_only=True)
+    parent = NestedIdentifiedResource()
+    details = fields.String(required=True, allow_none=True)
+    user = Related(User)
+    activity_date = Unix()
+
+    def __str__(self):
+        date = getattr(self, 'activity_date', 'unknown date')
+        return '%s on %s' % (self.type.name, date)
