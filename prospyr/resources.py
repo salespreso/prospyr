@@ -449,3 +449,40 @@ class Opportunity(Resource, mixins.ReadWritable):
     win_probability = fields.Integer()
     date_created = Unix()
     date_modified = Unix()
+class Identifier(SecondaryResource):
+
+    valid_types = {'lead', 'person', 'opportunity', 'company'}
+
+    class Meta:
+        pass
+    id = fields.Integer()
+    type = fields.String(
+        validate=validate.OneOf(choices=valid_types)
+    )
+
+    @classmethod
+    def from_instance(cls, resource):
+        if not isinstance(resource, Resource):
+            raise ValueError('%s must be an instance of Resource' % resource)
+        type_ = to_snake(type(resource).__name__)
+        if type_ not in cls.valid_types:
+            raise ValueError('%s must be one of %s' % (type_, cls.valid_types))
+        return cls(
+            type=type_,
+            id=resource.id
+        )
+
+    @classmethod
+    def from_resource_and_id(cls, resource, id):
+        type_ = to_snake(resource.__name__)
+        if type_ not in cls.valid_types:
+            raise ValueError('%s must be one of %s' % (type_, cls.valid_types))
+        return cls(type=type_, id=id)
+
+    def __str__(self):
+        return '{type} {id}'.format(
+            type=self.type.title(),
+            id=self.id
+        )
+
+
