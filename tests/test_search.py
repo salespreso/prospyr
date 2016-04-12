@@ -11,8 +11,8 @@ from requests import Response, codes
 
 from prospyr.connection import connect
 from prospyr.resources import Resource
-from prospyr.search import ResultSet
-from tests import reset_conns
+from prospyr.search import ActivityTypeListSet, ListSet, ResultSet
+from tests import load_fixture_json, reset_conns
 
 
 class MockManager(object):
@@ -181,3 +181,35 @@ def test_repr():
 
     rs._results = range(3)
     assert repr(rs) == '<ResultSet: 0, 1, 2>', repr(rs)
+
+
+def test_cannot_filter_listset():
+    with assert_raises(NotImplementedError) as cm:
+        ListSet(resource_cls=None).filter()
+    # msg should mention filtering by name
+    assert any('filtering' in arg for arg in cm.exception.args)
+
+
+def test_cannot_order_listset():
+    with assert_raises(NotImplementedError) as cm:
+        ListSet(resource_cls=None).order_by()
+    # msg should mention ordering by name
+    assert any('ordering' in arg for arg in cm.exception.args)
+
+
+def test_activitytype_listset():
+    connect(email='foo', token='bar')
+    atls = ActivityTypeListSet()
+    resp = Response()
+    resp._content = load_fixture_json('activity_types.json').encode('utf-8')
+    resp.status_code = codes.ok
+    with mock.patch('prospyr.connection.Connection.get') as get:
+        get.return_value = resp
+        actual = list(atls)
+
+    actual_names = {a.name for a in actual}
+    assert actual_names == {
+        'Note', 'Phone Call', 'Meeting', 'Property Changed',
+        'My Custom Activity Type', 'Pipeline Stage Changed'
+
+    }

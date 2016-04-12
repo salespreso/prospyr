@@ -7,37 +7,14 @@ methods.
 from __future__ import absolute_import, print_function, unicode_literals
 
 import json
-from hashlib import sha256
-from random import random
 
-import mock
 from nose.tools import assert_raises
-from requests import Response, codes
+from requests import codes
 from urlobject import URLObject
 
-from prospyr.connection import _default_url, connect
+from prospyr.connection import _default_url
 from prospyr.resources import Person
-from tests import load_fixture_json, reset_conns
-
-
-def make_cn_with_resp(method, status_code, content):
-    """
-    A connection which returns a canned response for one particular verb.
-
-    Content will be JSON-serialised. The verb-method is mocked so assertions
-    can be made against it.
-
-    cn = make_cn_with_resp('get', 200, 'Hello World')
-    # ... run code under test which calls cn.get(...)
-    cn.get.assert_called_with(*expected_args)
-    """
-    name = sha256(str(random()).encode()).hexdigest()
-    resp = Response()
-    resp._content = json.dumps(content).encode('utf-8')
-    resp.status_code = status_code
-    cn = connect(email='foo', token='bar', name=name)
-    setattr(cn, method, mock.Mock(return_value=resp))
-    return cn
+from tests import load_fixture_json, make_cn_with_resp, reset_conns
 
 
 @reset_conns

@@ -1,0 +1,48 @@
+{
+  "user": [
+    {
+      "id": 0,
+      "category": "user",
+      "name": "Note",
+      "is_disabled": false,
+      "count_as_interaction": false
+    },
+    {
+      "id": 1,
+      "category": "user",
+      "name": "Phone Call",
+      "is_disabled": false,
+      "count_as_interaction": true
+    },
+    {
+      "id": 2,
+      "category": "user",
+      "name": "Meeting",
+      "is_disabled": false,
+      "count_as_interaction": true
+    },
+    {
+      "id": 12345,
+      "category": "user",
+      "name": "My Custom Activity Type",
+      "is_disabled": false,
+      "count_as_interaction": true
+    }
+  ],
+  "system": [
+    {
+      "id": 1,
+      "category": "system",
+      "name": "Property Changed",
+      "is_disabled": false,
+      "count_as_interaction": false
+    },
+    {
+      "id": 3,
+      "category": "system",
+      "name": "Pipeline Stage Changed",
+      "is_disabled": false,
+      "count_as_interaction": false
+    }
+  ]
+}
