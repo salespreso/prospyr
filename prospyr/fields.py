@@ -73,15 +73,16 @@ class NestedIdentifiedResource(fields.Field):
         https://www.prosperworks.com/developer_api/identifier
     """
 
-    types = {
+    _default_types = {
         'person': 'prospyr.resources.Person',
         # 'lead': 'Lead',  # TODO
         'opportunity': 'prospyr.resources.Opportunity',
         'company': 'prospyr.resources.Company',
     }
 
-    def __init__(self, default=missing_, many=False, **kwargs):
+    def __init__(self, default=missing_, many=False, types=None, **kwargs):
         self.many = many
+        self.types = self._default_types if types is None else types
         self.reverse_types = {v: k for k, v in self.types.items()}
         super(NestedIdentifiedResource, self).__init__(default=default,
                                                        many=many, **kwargs)
@@ -109,5 +110,5 @@ class NestedIdentifiedResource(fields.Field):
         raws = []
         for v in value:
             raw = Identifier.from_instance(v)
-            raws.append(raw)
+            raws.append(raw._raw_data)
         return raws if self.many else raws[0]
