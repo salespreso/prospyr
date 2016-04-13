@@ -1,5 +1,9 @@
 *.pyc
-__pycache__
-.coverage
+/.coverage
+/.tox
+/build/
 /cover
-.tox
+/coverage.xml
+/dist/
+/prospyr.egg-info/
+__pycache__
