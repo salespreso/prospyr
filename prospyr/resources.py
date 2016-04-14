@@ -286,8 +286,10 @@ class Related(object):
 class User(Resource, mixins.Readable):
 
     class Meta(object):
-        search_path = 'users/search/'
+        list_path = 'users/'
         detail_path = 'users/{id}/'
+
+    objects = ListOnlyManager()
 
     id = fields.Integer()
     name = fields.String(required=True)
@@ -555,7 +557,7 @@ class Task(Resource, mixins.ReadWritable):
 
     id = fields.Integer()
     name = fields.String()
-    related_resource = NestedIdentifiedResource()
+    related_resource = NestedIdentifiedResource(allow_none=True)
     assignee = Related(User)
     due_date = Unix(allow_none=True)
     reminder_date = Unix(allow_none=True)
