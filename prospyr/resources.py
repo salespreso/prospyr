@@ -521,6 +521,7 @@ class Activity(Resource, mixins.ReadWritable):
         create_path = 'activities/'
         search_path = 'activities/search/'
         detail_path = 'activities/{id}/'
+        order_fields = set()  # no ordering
 
     id = fields.Integer()
     type = NestedResource(ActivityType, id_only=True)
