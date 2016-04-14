@@ -349,8 +349,8 @@ class Company(Resource, mixins.ReadWritable):
     tags = fields.List(fields.String)
     date_created = Unix()
     date_modified = Unix()
-    websites = fields.Nested(schema.CustomFieldSchema, many=True)
-    custom_fields = fields.Nested(schema.WebsiteSchema, many=True)
+    custom_fields = fields.Nested(schema.CustomFieldSchema, many=True)
+    websites = fields.Nested(schema.WebsiteSchema, many=True)
 
 
 class Person(Resource, mixins.ReadWritable):
