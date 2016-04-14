@@ -186,13 +186,14 @@ class Resource(with_metaclass(ResourceMeta)):
             raise exceptions.ValidationError(errors)
 
     @classmethod
-    def from_api_data(cls, data):
+    def from_api_data(cls, orig_data):
         """
         Alternate constructor. Build instance from ProsperWorks API data.
         """
-        data = cls._load_raw(data)
+        data = cls._load_raw(orig_data)
         instance = cls()
         instance._set_fields(data)
+        instance._orig_data = orig_data
         return instance
 
     @classmethod
@@ -349,7 +350,7 @@ class Company(Resource, mixins.ReadWritable):
     tags = fields.List(fields.String)
     date_created = Unix()
     date_modified = Unix()
-    custom_fields = fields.Nested(schema.CustomFieldSchema, many=True)
+    # TODO custom_fields = ...
     websites = fields.Nested(schema.WebsiteSchema, many=True)
 
 
@@ -395,7 +396,7 @@ class Person(Resource, mixins.ReadWritable):
     title = fields.String(allow_none=True)
     date_created = Unix()
     date_modified = Unix()
-    custom_fields = fields.Nested(schema.CustomFieldSchema, many=True)
+    # TODO custom_fields = ...
     websites = fields.Nested(schema.WebsiteSchema, many=True)
 
 
