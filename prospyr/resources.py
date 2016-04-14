@@ -98,6 +98,25 @@ class ListOnlyManager(Manager):
                                 using=self.using)
 
 
+class NoCollectionManager(Manager):
+    """
+    Manage resources which cannot be listed or searched.
+    """
+
+    def _raise_not_collection(self):
+        raise NotImplementedError('%s cannot be treated as a collection.' %
+                                  self.resource_cls.__name__)
+
+    def all(self):
+        self._raise_not_collection()
+
+    def filter(self, **query):
+        self._raise_not_collection()
+
+    def order_by(self, field):
+        self._raise_not_collection()
+
+
 class ActivityTypeManager(ListOnlyManager):
     """
     Special-case ActivityType's listing actually being two seperate lists.
@@ -483,10 +502,12 @@ class ActivityType(SecondaryResource, mixins.Readable):
 
 class Identifier(SecondaryResource):
 
-    valid_types = {'lead', 'person', 'opportunity', 'company'}
-
     class Meta:
         pass
+
+    valid_types = {'lead', 'person', 'opportunity', 'company'}
+    objects = NoCollectionManager()
+
     id = fields.Integer()
     type = fields.String(
         validate=OneOf(choices=valid_types)
