@@ -5,7 +5,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import sys
 from logging import getLogger
 
-from marshmallow import fields, validate
+from marshmallow import fields
+from marshmallow.validate import OneOf
 from six import string_types, with_metaclass
 
 from prospyr import connection, exceptions, mixins, schema
@@ -451,11 +452,11 @@ class Opportunity(Resource, mixins.ReadWritable):
     primary_contact = Related(Person, required=True)
     priority = fields.String(
         allow_none=True,
-        validate=validate.OneOf(choices=('None', 'Low', 'Medium', 'High')),
+        validate=OneOf(choices=('None', 'Low', 'Medium', 'High')),
     )
     stage = fields.String(
         allow_none=True,
-        validate=validate.OneOf(choices=('Open', 'Won', 'Lost', 'Abandoned')),
+        validate=OneOf(choices=('Open', 'Won', 'Lost', 'Abandoned')),
     )
     tags = fields.List(fields.String)
     win_probability = fields.Integer()
@@ -471,7 +472,7 @@ class ActivityType(SecondaryResource, mixins.Readable):
 
     id = fields.Integer(required=True)
     category = fields.String(
-        validate=validate.OneOf(choices=('user', 'system')),
+        validate=OneOf(choices=('user', 'system')),
     )
     name = fields.String()
     is_disabled = fields.Boolean()
@@ -486,7 +487,7 @@ class Identifier(SecondaryResource):
         pass
     id = fields.Integer()
     type = fields.String(
-        validate=validate.OneOf(choices=valid_types)
+        validate=OneOf(choices=valid_types)
     )
 
     @classmethod
@@ -531,3 +532,36 @@ class Activity(Resource, mixins.ReadWritable):
     def __str__(self):
         date = getattr(self, 'activity_date', 'unknown date')
         return '%s on %s' % (self.type.name, date)
+
+
+class Task(Resource, mixins.ReadWritable):
+    class Meta:
+        create_path = 'tasks/'
+        search_path = 'tasks/search/'
+        detail_path = 'tasks/{id}/'
+        order_fields = {
+            'name',
+            'assigned_to',
+            'related_to',
+            'status',
+            'priority',
+            'due_date',
+            'reminder_date',
+            'completed_date',
+            'date_created',
+            'date_modified',
+        }
+
+    id = fields.Integer()
+    name = fields.String()
+    related_resource = NestedIdentifiedResource()
+    assignee = Related(User)
+    due_date = Unix(allow_none=True)
+    reminder_date = Unix(allow_none=True)
+    completed_date = Unix(allow_none=True)
+    priority = fields.String(validate=OneOf(choices=('None', 'High')))
+    status = fields.String(validate=OneOf(choices=('Open', 'Completed')))
+    details = fields.String(allow_none=True)
+    tags = fields.List(fields.String)
+    date_created = Unix()
+    date_modified = Unix()
