@@ -2,6 +2,8 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+from functools import wraps
+
 import arrow
 from arrow.parser import ParserError
 from marshmallow import ValidationError, fields
@@ -27,6 +29,28 @@ class Unix(fields.Field):
             raise ValidationError(ex)
 
 
+def normalise_many(fn, default=False):
+    """
+    Turn single values into lists if self.many = True.
+
+    Use to wrap the _serialize and _deserialize methods of Field subclasses.
+    These methods normally have the signature (self, value, attr, data); once
+    wrapped they can assume `value` is a collection. From there, (self, values,
+    attr, data) makes more sense as the signature.
+    """
+    @wraps(fn)
+    def wrapper(self, value, attr, data):
+        many = getattr(self, 'many', default)
+        if not many:
+            value = [value]
+        res = fn(self, value, attr, data)
+        if not many:
+            return res[0]
+        else:
+            return res
+    return wrapper
+
+
 class NestedResource(fields.Field):
     """
     Represent a nested data structure as a Resource instance.
@@ -45,24 +69,19 @@ class NestedResource(fields.Field):
         super(NestedResource, self).__init__(default=default, many=many,
                                              **kwargs)
 
-    def _deserialize(self, value, attr, data):
-        if not self.many:
-            value = [value]
-
+    @normalise_many
+    def _deserialize(self, values, attr, data):
         resources = []
-        for v in value:
+        for value in values:
             if self.id_only:
-                resources.append(self.resource_cls.objects.get(id=v['id']))
+                resources.append(self.resource_cls.objects.get(id=value['id']))
             else:
-                resources.append(self.resource_cls.from_api_data(v))
+                resources.append(self.resource_cls.from_api_data(value))
+        return resources
 
-        return resources if self.many else resources[0]
-
-    def _serialize(self, value, attr, data):
-        if self.many:
-            return [v._raw_data for v in value]
-        else:
-            return value._raw_data
+    @normalise_many
+    def _serialize(self, values, attr, data):
+        return [value._raw_data for value in values]
 
 
 class NestedIdentifiedResource(fields.Field):
@@ -87,28 +106,34 @@ class NestedIdentifiedResource(fields.Field):
         super(NestedIdentifiedResource, self).__init__(default=default,
                                                        many=many, **kwargs)
 
-    def _deserialize(self, value, attr, data):
-        if not self.many:
-            value = [value]
-
+    @normalise_many
+    def _deserialize(self, values, attr, data):
         resources = []
-        for v in value:
-            resource_cls = import_dotted_path(self.types.get(v['type']))
-            if resource_cls is None:
-                raise ValueError('Unknown identifier type %s' % v['type'])
-            resource = resource_cls.objects.get(id=v['id'])
+        for value in values:
+            idtype = value['type']
+            if idtype is None and self.allow_none is False:
+                self.fail('null')
+            elif idtype is None:
+                resource = None
+            else:
+                resource_cls = import_dotted_path(self.types.get(idtype))
+                if resource_cls is None:
+                    raise ValueError('Unknown identifier type %s' % idtype)
+                resource = resource_cls.objects.get(id=value['id'])
             resources.append(resource)
+        return resources
 
-        return resources if self.many else resources[0]
-
-    def _serialize(self, value, attr, data):
-        if not self.many:
-            value = [value]
-
+    @normalise_many
+    def _serialize(self, values, attr, data):
         from prospyr.resources import Identifier  # avoid circular derp
 
         raws = []
-        for v in value:
-            raw = Identifier.from_instance(v)
-            raws.append(raw._raw_data)
-        return raws if self.many else raws[0]
+        for value in values:
+            if value is None and self.allow_none is False:
+                self.fail('null')
+            elif value is None:
+                raw = {'type': None, 'id': None}
+            else:
+                raw = Identifier.from_instance(value)._raw_data
+            raws.append(raw)
+        return raws
