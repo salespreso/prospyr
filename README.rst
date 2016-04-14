@@ -7,10 +7,6 @@ A Python client library for ProsperWorks.
    :target: https://travis-ci.org/salespreso/prospyr
    :alt: Prospyr builds.
 
-.. image:: https://img.shields.io/pypi/v/prospyr.svg
-   :target: https://pypi.python.org/pypi/prospyr/
-   :alt: Prospyr on Pypi.
-
 .. image:: https://img.shields.io/codecov/c/github/salespreso/prospyr.svg
    :target: https://codecov.io/github/salespreso/prospyr
    :alt: Prospyr on Codecov.
@@ -18,6 +14,10 @@ A Python client library for ProsperWorks.
 .. image:: https://landscape.io/github/salespreso/prospyr/master/landscape.svg?style=flat
    :target: https://landscape.io/github/salespreso/prospyr/master
    :alt: Code Health
+
+.. image:: https://badge.fury.io/py/prospyr.svg
+   :target: https://pypi.python.org/pypi/prospyr/
+   :alt: Prospyr on Pypi.
 
 Prospyr runs on Python 2.7 or Python 3.4+. 
 
