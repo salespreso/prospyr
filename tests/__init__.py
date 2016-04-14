@@ -28,11 +28,11 @@ def reset_conns(fn):
     """
     @wraps(fn)
     def wrapped(*args, **kwargs):
-        for key in list(_connections):
-            del _connections[key]
-        fn(*args, **kwargs)
-        for key in list(_connections):
-            del _connections[key]
+        try:
+            fn(*args, **kwargs)
+        finally:
+            for key in list(_connections):
+                del _connections[key]
     return wrapped
 
 
