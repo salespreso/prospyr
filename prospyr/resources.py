@@ -545,8 +545,11 @@ class Activity(Resource, mixins.ReadWritable):
     activity_date = Unix()
 
     def __str__(self):
-        date = getattr(self, 'activity_date', 'unknown date')
-        return '%s on %s' % (self.type.name, date)
+        if self._orig_data.get('is_deleted', False):
+            return 'Deleted activity'
+        else:
+            date = getattr(self, 'activity_date', 'unknown date')
+            return '%s on %s' % (self.type.name, date)
 
 
 class Task(Resource, mixins.ReadWritable):
