@@ -8,7 +8,9 @@ import arrow
 from arrow.parser import ParserError
 from marshmallow import ValidationError, fields
 from marshmallow.utils import missing as missing_
+from requests import codes
 
+from prospyr import exceptions
 from prospyr.util import encode_typename, import_dotted_path
 
 
@@ -132,7 +134,14 @@ class NestedIdentifiedResource(fields.Field):
                 if resource_path is None:
                     raise ValueError('Unknown identifier type %s' % idtype)
                 resource_cls = import_dotted_path(resource_path)
-                resource = resource_cls.objects.get(id=value['id'])
+                try:
+                    resource = resource_cls.objects.get(id=value['id'])
+                except exceptions.ApiError as ex:
+                    status_code, msg = ex.args
+                    if status_code == codes.not_found:
+                        resource = None
+                    else:
+                        raise
 
             resources.append(resource)
         return resources
