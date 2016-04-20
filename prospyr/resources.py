@@ -2,7 +2,6 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-import sys
 from logging import getLogger
 
 from marshmallow import fields
@@ -12,18 +11,9 @@ from six import string_types, with_metaclass
 from prospyr import connection, exceptions, mixins, schema
 from prospyr.fields import NestedIdentifiedResource, NestedResource, Unix
 from prospyr.search import ActivityTypeListSet, ListSet, ResultSet
-from prospyr.util import import_dotted_path, to_snake
+from prospyr.util import encode_typename, import_dotted_path, to_snake
 
 logger = getLogger(__name__)
-
-
-def encode_typename(name):
-    """
-    Type names must be bytes in Python 2, unicode in Python 3
-    """
-    if sys.version_info < (3, 0, 0):
-        return name.encode('ascii')
-    return name
 
 
 class Manager(object):
@@ -590,3 +580,31 @@ class Task(Resource, mixins.ReadWritable):
     tags = fields.List(fields.String)
     date_created = Unix()
     date_modified = Unix()
+
+
+class Placeholder(object):
+    """
+    Stand-in for Prosperworks resources that Prospyr does not yet model.
+
+    This is required because an Identifier field can point at resources that
+    aren't yet implemented.
+    """
+
+    def __init__(self, id):
+        self.id = id
+
+    def __repr__(self):
+        classname = type(self).__name__
+        friendly = str(self)
+        return '<%s: %s (placeholder)>' % (classname, friendly)
+
+    def __str__(self):
+        return str(self.id)
+
+
+class Lead(Placeholder):
+    pass
+
+
+class Project(Placeholder):
+    pass

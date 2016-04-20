@@ -9,7 +9,7 @@ from arrow.parser import ParserError
 from marshmallow import ValidationError, fields
 from marshmallow.utils import missing as missing_
 
-from prospyr.util import import_dotted_path
+from prospyr.util import encode_typename, import_dotted_path
 
 
 class Unix(fields.Field):
@@ -94,9 +94,14 @@ class NestedIdentifiedResource(fields.Field):
 
     _default_types = {
         'person': 'prospyr.resources.Person',
-        # 'lead': 'Lead',  # TODO
+        'lead': 'prospyr.resources.Lead',
         'opportunity': 'prospyr.resources.Opportunity',
         'company': 'prospyr.resources.Company',
+    }
+
+    placeholder_types = {
+        'lead': 'Lead',
+        'project': 'Project',
     }
 
     def __init__(self, default=missing_, many=False, types=None, **kwargs):
@@ -115,11 +120,20 @@ class NestedIdentifiedResource(fields.Field):
                 self.fail('null')
             elif idtype is None:
                 resource = None
+            elif idtype in self.placeholder_types:
+                # the resource isn't modelled yet
+                from prospyr.resources import Placeholder
+                name = encode_typename(self.placeholder_types[idtype])
+                resource_cls = type(name, (Placeholder, ), {})
+                resource = resource_cls(id=value['id'])
             else:
-                resource_cls = import_dotted_path(self.types.get(idtype))
-                if resource_cls is None:
+                # modelled resource; fetch
+                resource_path = self.types.get(idtype)
+                if resource_path is None:
                     raise ValueError('Unknown identifier type %s' % idtype)
+                resource_cls = import_dotted_path(resource_path)
                 resource = resource_cls.objects.get(id=value['id'])
+
             resources.append(resource)
         return resources
 

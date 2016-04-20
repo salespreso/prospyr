@@ -4,6 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 import importlib
 import re
+import sys
 from datetime import timedelta
 
 
@@ -77,3 +78,12 @@ def seconds(days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0,
                    milliseconds=milliseconds, minutes=minutes, hours=hours,
                    weeks=weeks)
     return td.total_seconds()
+
+
+def encode_typename(name):
+    """
+    Type names must be bytes in Python 2, unicode in Python 3
+    """
+    if sys.version_info < (3, 0, 0):
+        return name.encode('ascii')
+    return name
