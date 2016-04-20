@@ -461,7 +461,7 @@ class Opportunity(Resource, mixins.ReadWritable):
     id = fields.Integer()
     name = fields.String(required=True)
     company_name = fields.String(allow_none=True, load_only=True)
-    close_date = Unix()
+    close_date = Unix(allow_none=True)
     details = fields.String(allow_none=True)
     monetary_value = fields.Integer(allow_none=True)
 
