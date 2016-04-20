@@ -540,7 +540,7 @@ class Activity(Resource, mixins.ReadWritable):
     id = fields.Integer()
     type = NestedResource(ActivityType, id_only=True)
     parent = NestedIdentifiedResource()
-    details = fields.String(required=True, allow_none=True)
+    details = fields.String(allow_none=True)
     user = Related(User)
     activity_date = Unix()
 
