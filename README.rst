@@ -59,6 +59,32 @@ If you've used Django, Prospyr might feel strangely familiar.
     art.delete()
 
 
+Resources
+=========
+
+The following ProsperWorks resources are supported by Prospyr:
+
+- Activity (read–only)
+- ActivityType
+- Company
+- CustomerSource (read–only)
+- Identifier
+- LossReason (read–only)
+- Opportunity
+- Person
+- Pipeline (read–only)
+- PipelineStage (read–only)
+- Task (read–only)
+- User (read–only)
+
+The following resources are not supported, but will still appear when
+referenced by the supported resources above. In this case, they come only with
+an ``id`` attribute.
+
+- Lead
+- Project
+
+
 Usage
 =====
 
@@ -253,6 +279,47 @@ instances; these only support the ``all()`` method:
 
     PipelineStage.objects.all()
     >>> <ListSet: Qualifying, Quoted, ...>
+
+
+Collection Error Handling
+-------------------------
+
+Prospyr validates data delivered from ProsperWorks when building representative
+Python objects for local use. Because there are no documented details on the
+validation that ProsperWorks itself uses, Prospyr's validation rules are
+sometimes incorrect or more strict than necessary. The author suspects that
+sometimes ProsperWorks also delivers data that is simply invalid.
+
+This can cause exceptions to be raised when iterating over result sets (e.g.
+``for person in Person.objects.all()...``) which prevent the remainder of the
+collection from being accessed.
+
+To make your life easier while such a mismatch is corrected in Prospyr, you can
+choose to have these validation errors collected instead of being raised:
+
+.. code-block:: python
+
+    from prospyr import Person
+
+    errs = []
+    for person in Person.objects.store_invalid(errs).all():
+        # ...
+
+    if errs:
+        # handle errors
+
+The argument to ``store_invalid`` must, like a list, have a working ``append``
+method. It will be filled with ``ValidationError`` instances which each have
+``errors``, ``raw_data`` and ``resource_cls`` attributes.
+
+If your use–case allows you to correct the problem in ``raw_data``, you can
+recover like so:
+
+.. code-block:: python
+
+    for err in errs:
+        good_data = make_corrections(err.raw_data)
+        instance = err.resource_cls.from_api_data(good_data)
 
 
 Tests

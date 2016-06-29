@@ -13,8 +13,9 @@ logger = getLogger(__name__)
 
 class LazyCacheList(object):
 
-    def __init__(self):
+    def __init__(self, invalid_dest=None):
         self._results = self._results_generator()
+        self._invalid_dest = invalid_dest
 
     def _results_generator(self):
         """
@@ -70,6 +71,35 @@ class LazyCacheList(object):
             results=', '.join(first_6)
         )
 
+    def store_invalid(self, dest):
+        """
+        Store invalid data in `dest` instead of raising ValidationError.
+
+        Invalid data takes the form of a ValidationError instance which has as
+        attributes the raw data, validation errors and resource class.
+        """
+        assert hasattr(dest, 'append'), (
+            '`dest` must support appending (perhaps argue a list?)'
+        )
+        self._invalid_dest = dest
+        return self
+
+    def _build_resources(self, rows):
+        """
+        Yield resources built from `rows`.
+
+        ValidationErrors are raised or stored, if store_invalid() has been
+        called.
+        """
+        for row in rows:
+            try:
+                yield self._resource_cls.from_api_data(row)
+            except exceptions.ValidationError as ex:
+                if self._invalid_dest is not None:
+                    self._invalid_dest.append(ex)
+                else:
+                    raise
+
 
 class ResultSet(LazyCacheList):
     """
@@ -77,8 +107,9 @@ class ResultSet(LazyCacheList):
     """
 
     def __init__(self, resource_cls, params=None, order_field=None,
-                 order_dir='asc', using='default', page_size=100):
-        super(ResultSet, self).__init__()
+                 order_dir='asc', using='default', page_size=100,
+                 invalid_dest=None):
+        super(ResultSet, self).__init__(invalid_dest=invalid_dest)
         self._params = params or {}
         self._order_field = order_field
         self._order_dir = order_dir
@@ -95,7 +126,8 @@ class ResultSet(LazyCacheList):
         return ResultSet(params=new_params, using=self._using,
                          resource_cls=self._resource_cls,
                          order_field=self._order_field,
-                         order_dir=self._order_dir, page_size=self._page_size)
+                         order_dir=self._order_dir, page_size=self._page_size,
+                         invalid_dest=self._invalid_dest)
 
     def order_by(self, field):
         dir = 'asc'
@@ -109,7 +141,8 @@ class ResultSet(LazyCacheList):
             )
         return ResultSet(params=self._params, using=self._using,
                          resource_cls=self._resource_cls, order_dir=dir,
-                         order_field=field, page_size=self._page_size)
+                         order_field=field, page_size=self._page_size,
+                         invalid_dest=self._invalid_dest)
 
     @property
     def _conn(self):
@@ -151,8 +184,8 @@ class ResultSet(LazyCacheList):
             if not page_data:
                 break
 
-            for data in page_data:
-                yield self._resource_cls.from_api_data(data)
+            for resource in self._build_resources(page_data):
+                yield resource
 
             # detect last page of results
             if len(page_data) < self._page_size:
@@ -161,8 +194,8 @@ class ResultSet(LazyCacheList):
 
 class ListSet(LazyCacheList):
 
-    def __init__(self, resource_cls, using='default'):
-        super(ListSet, self).__init__()
+    def __init__(self, resource_cls, using='default', invalid_dest=None):
+        super(ListSet, self).__init__(invalid_dest=invalid_dest)
         self._resource_cls = resource_cls
         self._using = using
 
@@ -178,8 +211,8 @@ class ListSet(LazyCacheList):
         if resp.status_code != codes.ok:
             raise exceptions.ApiError(resp.status_code, resp.text)
 
-        for data in resp.json():
-            yield self._resource_cls.from_api_data(data)
+        for resource in self._build_resources(resp.json()):
+            yield resource
 
     def all(self):
         return self
@@ -215,5 +248,6 @@ class ActivityTypeListSet(ListSet):
 
         raw_data = resp.json()
         rows = raw_data['user'] + raw_data['system']  # combine the two lists.
-        for data in rows:
-            yield self._resource_cls.from_api_data(data)
+
+        for resource in self._build_resources(rows):
+            yield resource

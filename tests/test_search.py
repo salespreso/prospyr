@@ -10,6 +10,7 @@ from nose.tools import assert_raises
 from requests import Response, codes
 
 from prospyr.connection import connect
+from prospyr.exceptions import ValidationError
 from prospyr.resources import Resource
 from prospyr.search import ActivityTypeListSet, ListSet, ResultSet
 from tests import load_fixture_json, reset_conns
@@ -211,5 +212,22 @@ def test_activitytype_listset():
     assert actual_names == {
         'Note', 'Phone Call', 'Meeting', 'Property Changed',
         'My Custom Activity Type', 'Pipeline Stage Changed'
-
     }
+
+
+@reset_conns
+def test_storing_invalid_resources():
+    remote_data = json_to_resp([{'id': 1}, {'id': 'not-an-integer'}])
+    cn = connect(email='foo', token='bar')
+    cn.session.post = mock.Mock(side_effect=[remote_data])
+
+    # 'not-an-integer' fails integer validation and raises
+    with assert_raises(ValidationError):
+        list(ResultSet(resource_cls=IdResource))
+
+    # with store_invalid, no exception is raised
+    cn.session.post = mock.Mock(side_effect=[remote_data])
+    invalid = []
+    valid = list(ResultSet(resource_cls=IdResource).store_invalid(invalid))
+    assert len(valid) == 1  # id 1 passed validation
+    assert len(invalid) == 1  # id 'not-an-integer' didn't

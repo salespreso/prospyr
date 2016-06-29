@@ -56,6 +56,11 @@ class Manager(object):
                                  using=self.using)
         return fresh.order_by(field)
 
+    def store_invalid(self, dest):
+        fresh = self._search_cls(resource_cls=self.resource_cls,
+                                 using=self.using)
+        return fresh.store_invalid(dest)
+
 
 class ListOnlyManager(Manager):
     """
