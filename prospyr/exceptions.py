@@ -20,4 +20,8 @@ class MisconfiguredError(ProspyrException):
 
 
 class ValidationError(ProspyrException):
-    pass
+    def __init__(self, message, errors, raw_data, resource_cls):
+        super(ValidationError, self).__init__(message)
+        self.errors = errors
+        self.raw_data = raw_data
+        self.resource_cls = resource_cls

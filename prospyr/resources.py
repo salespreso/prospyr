@@ -173,7 +173,13 @@ class Resource(with_metaclass(ResourceMeta)):
         data = {k: getattr(self, k) for k in attrs}
         errors = self.Meta.schema.validate(data)
         if errors:
-            raise exceptions.ValidationError(errors)
+            raise exceptions.ValidationError(
+                ('{cls} instance is not valid; Errors encountered: {errors}'
+                 .format(cls=type(self), errors=repr(errors))),
+                raw_data=data,
+                resource_cls=type(self),
+                errors=errors
+            )
 
     @classmethod
     def from_api_data(cls, orig_data):
@@ -188,12 +194,18 @@ class Resource(with_metaclass(ResourceMeta)):
 
     @classmethod
     def _load_raw(cls, raw_data):
+        """
+        Convert `raw_data` into a Resource instance.
+        """
         data, errors = cls.Meta.schema.load(raw_data)
         if errors:
             raise exceptions.ValidationError(
-                'ProsperWorks delivered data which does not agree with the '
-                'local Prospyr schema. This is probably a Prospyr bug. '
-                'Errors encountered: %s' % repr(errors)
+                ('ProsperWorks delivered data which does not agree with the '
+                 'local Prospyr schema. This is probably a Prospyr bug. '
+                 'Errors encountered: %s' % repr(errors)),
+                raw_data=raw_data,
+                resource_cls=cls,
+                errors=errors,
             )
         return data
 
@@ -225,7 +237,10 @@ class Resource(with_metaclass(ResourceMeta)):
         data, errors = schema.dump(self)
         if errors:
             raise exceptions.ValidationError(
-                'Could not serialize %s data: %s' % (self, repr(errors))
+                'Could not serialize %s data: %s' % (self, repr(errors)),
+                raw_data=data,
+                resource_cls=type(self),
+                errors=errors,
             )
 
         return data
