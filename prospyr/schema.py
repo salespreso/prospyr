@@ -6,6 +6,8 @@ from collections import Mapping, namedtuple
 
 from marshmallow import Schema, fields, post_dump, post_load, pre_dump
 
+from prospyr.fields import Email
+
 
 class TrimSchema(Schema):
     """
@@ -55,7 +57,7 @@ class NamedTupleSchema(Schema):
 
 
 class EmailSchema(NamedTupleSchema):
-    email = fields.Email()
+    email = Email()
     category = fields.String()
 
 

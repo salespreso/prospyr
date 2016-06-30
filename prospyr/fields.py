@@ -12,6 +12,7 @@ from requests import codes
 
 from prospyr import exceptions
 from prospyr.util import encode_typename, import_dotted_path
+from prospyr.validate import WhitespaceEmail
 
 
 class Unix(fields.Field):
@@ -29,6 +30,26 @@ class Unix(fields.Field):
             return arrow.get(value).datetime
         except ParserError as ex:
             raise ValidationError(ex)
+
+
+class Email(fields.Email):
+    """
+    ProsperWorks emails can have leading and trailing spaces.
+    """
+    def __init__(self, *args, **kwargs):
+        super(Email, self).__init__(self, *args, **kwargs)
+
+        # clobber the validator that superclass inserted with
+        # whitespace-tolerant equivalent
+        validator = WhitespaceEmail(error=self.error_messages['invalid'])
+        self.validators[0] = validator
+
+    def _validated(self, value):
+        if value is None:
+            return None
+        return WhitespaceEmail(
+            error=self.error_messages['invalid']
+        )(value)
 
 
 def normalise_many(fn, default=False):
