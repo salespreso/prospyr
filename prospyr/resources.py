@@ -605,6 +605,50 @@ class Task(Resource, mixins.ReadWritable):
     date_modified = Unix()
 
 
+class Lead(Resource, mixins.ReadWritable):
+    class Meta:
+        create_path = 'leads/'
+        search_path = 'leads/search'
+        detail_path = 'leads/{id}'
+        order_fields = {
+            'name',
+            'assignee',
+            'company_name',
+            'customer_source',
+            'monetary_value',
+            'status',
+            'title',
+            'city',
+            'state',
+            'inactive_days',
+            'last_interaction',
+            'interaction_count',
+            'date_created',
+            'date_modified'
+        }
+
+    id = fields.Integer()
+    name = fields.String()
+    address = fields.Nested(schema.AddressSchema, allow_none=True)
+    assignee_id = fields.Integer(allow_none=True)
+    assignee = Related(User)
+    company_name = fields.String(allow_none=True)
+    customer_source_id = fields.Integer(allow_none=True)
+    customer_source = Related(CustomerSource)
+    details = fields.String(allow_none=True)
+    email = fields.Nested(schema.EmailSchema, allow_none=True)
+    monetary_value = fields.Integer(allow_none=True)
+    phone_numbers = fields.Nested(schema.PhoneNumberSchema, many=True)
+    socials = fields.Nested(schema.SocialSchema, many=True)
+    status = fields.String()
+    tags = fields.List(fields.String)
+    title = fields.String(allow_none=True)
+    websites = fields.Nested(schema.WebsiteSchema, many=True)
+    # TODO custom_fields = ...
+    date_created = Unix()
+    date_modified = Unix()
+
+
 class Placeholder(object):
     """
     Stand-in for Prosperworks resources that Prospyr does not yet model.
@@ -623,10 +667,6 @@ class Placeholder(object):
 
     def __str__(self):
         return str(self.id)
-
-
-class Lead(Placeholder):
-    pass
 
 
 class Project(Placeholder):

@@ -69,6 +69,7 @@ The following ProsperWorks resources are supported by Prospyr:
 - Company
 - CustomerSource (read–only)
 - Identifier
+- Lead
 - LossReason (read–only)
 - Opportunity
 - Person
@@ -81,7 +82,6 @@ The following resources are not supported, but will still appear when
 referenced by the supported resources above. In this case, they come only with
 an ``id`` attribute.
 
-- Lead
 - Project
 
 
