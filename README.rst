@@ -84,6 +84,10 @@ an ``id`` attribute.
 
 - Project
 
+Note you will receive errors trying to deal with the Lead resource if the Leads
+feature is not enabled in your ProsperWorks account. You can change this at
+Settings / Customize ProsperWorks / Lead Management.
+
 
 Usage
 =====
