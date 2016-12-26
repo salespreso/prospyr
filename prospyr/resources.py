@@ -112,6 +112,17 @@ class NoCollectionManager(Manager):
         self._raise_not_collection()
 
 
+class SingletonManager(NoCollectionManager):
+    """
+    Manage resources that have a single object.
+    """
+
+    def get(self):
+        instance = self.resource_cls()
+        instance.read(using=self.using)
+        return instance
+
+
 class ActivityTypeManager(ListOnlyManager):
     """
     Special-case ActivityType's listing actually being two seperate lists.
@@ -647,6 +658,17 @@ class Lead(Resource, mixins.ReadWritable):
     # TODO custom_fields = ...
     date_created = Unix()
     date_modified = Unix()
+
+
+class Account(Resource, mixins.Singleton):
+
+    objects = SingletonManager()
+
+    class Meta:
+        detail_path = 'account/'
+
+    id = fields.Integer()
+    name = fields.String()
 
 
 class Placeholder(object):
