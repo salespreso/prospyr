@@ -6,9 +6,11 @@ from logging import getLogger
 
 from marshmallow import fields
 from marshmallow.validate import OneOf
+from requests import codes
 from six import string_types, with_metaclass
 
 from prospyr import connection, exceptions, mixins, schema
+from prospyr.exceptions import ApiError
 from prospyr.fields import NestedIdentifiedResource, NestedResource, Unix
 from prospyr.search import ActivityTypeListSet, ListSet, ResultSet
 from prospyr.util import encode_typename, import_dotted_path, to_snake
@@ -370,6 +372,7 @@ class Person(Resource, mixins.ReadWritable):
         create_path = 'people/'
         search_path = 'people/search/'
         detail_path = 'people/{id}/'
+        fetch_by_email_path = 'people/fetch_by_email/'
         order_fields = {
             'name',
             'city',
@@ -408,6 +411,19 @@ class Person(Resource, mixins.ReadWritable):
     date_modified = Unix()
     # TODO custom_fields = ...
     websites = fields.Nested(schema.WebsiteSchema, many=True)
+
+    @classmethod
+    def fetch_by_email(cls, email, using='default'):
+        """
+        If a person with the supplied email is not found, an ApiError
+        will be raised with the 404 response.
+        """
+        conn = connection.get(using)
+        path = cls.Meta.fetch_by_email_path
+        resp = conn.post(conn.build_absolute_url(path), json={'email': email})
+        if resp.status_code not in {codes.ok}:
+            raise ApiError(resp.status_code, resp.text)
+        return cls.from_api_data(resp.json())
 
 
 class LossReason(SecondaryResource, mixins.Readable):
