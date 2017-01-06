@@ -123,9 +123,9 @@ class ActivityTypeManager(ListOnlyManager):
 
 class PersonManager(Manager):
     def get(self, id=None, email=None):
-        if id:
-            super(PersonManager, self).get(id)
-        elif email:
+        if id is not None:
+            return super(PersonManager, self).get(id)
+        elif email is not None:
             conn = connection.get(self.using)
             path = self.resource_cls.Meta.fetch_by_email_path
             resp = conn.post(

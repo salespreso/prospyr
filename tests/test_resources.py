@@ -37,13 +37,19 @@ class MockSession(object):
     def __init__(self, urls):
         self.urls = urls
 
-    def get(self, url, *args, **kwargs):
+    def _method(self, url, *args, **kwargs):
         success = url in self.urls
         content = self.urls.get(url, '')
         resp = Response()
         resp._content = content.encode('utf-8')
         resp.status_code = codes.ok if success else codes.not_found
         return resp
+
+    def get(self, url, *args, **kwargs):
+        return self._method(url, *args, **kwargs)
+
+    def post(self, url, *args, **kwargs):
+        return self._method(url, *args, **kwargs)
 
 
 @reset_conns
@@ -132,3 +138,23 @@ def test_str_does_not_raise():
     )
     for person in people:
         print(str(person))
+
+
+@reset_conns
+def test_id_or_email_required_for_person():
+    cn = connect(email='foo', token='bar')
+    cn.session = MockSession(urls={
+        cn.build_absolute_url('people/1/'): load_fixture_json('person.json')
+    })
+    with assert_raises(exceptions.ProspyrException):
+        Person.objects.get()
+
+
+@reset_conns
+def test_get_person_by_email():
+    cn = connect(email='foo', token='bar')
+    cn.session = MockSession(urls={
+        cn.build_absolute_url('people/fetch_by_email/'): load_fixture_json('person.json')  # noqa
+    })
+    person = Person.objects.get(email='support@prosperworks.com')
+    assert_is_jon(person)
