@@ -10,7 +10,7 @@ from requests import codes
 from six import string_types, with_metaclass
 
 from prospyr import connection, exceptions, mixins, schema
-from prospyr.exceptions import ApiError
+from prospyr.exceptions import ApiError, ProspyrException
 from prospyr.fields import NestedIdentifiedResource, NestedResource, Unix
 from prospyr.search import ActivityTypeListSet, ListSet, ResultSet
 from prospyr.util import encode_typename, import_dotted_path, to_snake
@@ -119,6 +119,23 @@ class ActivityTypeManager(ListOnlyManager):
     Special-case ActivityType's listing actually being two seperate lists.
     """
     _search_cls = ActivityTypeListSet
+
+
+class PersonManager(Manager):
+    def get(self, id=None, email=None):
+        if id:
+            super(PersonManager, self).get(id)
+        elif email:
+            conn = connection.get(self.using)
+            path = self.resource_cls.Meta.fetch_by_email_path
+            resp = conn.post(
+                conn.build_absolute_url(path),
+                json={'email': email}
+            )
+            if resp.status_code not in {codes.ok}:
+                raise ApiError(resp.status_code, resp.text)
+            return self.resource_cls.from_api_data(resp.json())
+        raise ProspyrException("id or email is required when getting a Person")
 
 
 class ResourceMeta(type):
@@ -385,6 +402,8 @@ class Person(Resource, mixins.ReadWritable):
             'date_modified',
         }
 
+    objects = PersonManager()
+
     id = fields.Integer()
     name = fields.String(required=True)
     address = fields.Nested(
@@ -411,19 +430,6 @@ class Person(Resource, mixins.ReadWritable):
     date_modified = Unix()
     # TODO custom_fields = ...
     websites = fields.Nested(schema.WebsiteSchema, many=True)
-
-    @classmethod
-    def fetch_by_email(cls, email, using='default'):
-        """
-        If a person with the supplied email is not found, an ApiError
-        will be raised with the 404 response.
-        """
-        conn = connection.get(using)
-        path = cls.Meta.fetch_by_email_path
-        resp = conn.post(conn.build_absolute_url(path), json={'email': email})
-        if resp.status_code not in {codes.ok}:
-            raise ApiError(resp.status_code, resp.text)
-        return cls.from_api_data(resp.json())
 
 
 class LossReason(SecondaryResource, mixins.Readable):
