@@ -6,9 +6,11 @@ from logging import getLogger
 
 from marshmallow import fields
 from marshmallow.validate import OneOf
+from requests import codes
 from six import string_types, with_metaclass
 
 from prospyr import connection, exceptions, mixins, schema
+from prospyr.exceptions import ApiError, ProspyrException
 from prospyr.fields import NestedIdentifiedResource, NestedResource, Unix
 from prospyr.search import ActivityTypeListSet, ListSet, ResultSet
 from prospyr.util import encode_typename, import_dotted_path, to_snake
@@ -128,6 +130,23 @@ class ActivityTypeManager(ListOnlyManager):
     Special-case ActivityType's listing actually being two seperate lists.
     """
     _search_cls = ActivityTypeListSet
+
+
+class PersonManager(Manager):
+    def get(self, id=None, email=None):
+        if id is not None:
+            return super(PersonManager, self).get(id)
+        elif email is not None:
+            conn = connection.get(self.using)
+            path = self.resource_cls.Meta.fetch_by_email_path
+            resp = conn.post(
+                conn.build_absolute_url(path),
+                json={'email': email}
+            )
+            if resp.status_code not in {codes.ok}:
+                raise ApiError(resp.status_code, resp.text)
+            return self.resource_cls.from_api_data(resp.json())
+        raise ProspyrException("id or email is required when getting a Person")
 
 
 class ResourceMeta(type):
@@ -381,6 +400,7 @@ class Person(Resource, mixins.ReadWritable):
         create_path = 'people/'
         search_path = 'people/search/'
         detail_path = 'people/{id}/'
+        fetch_by_email_path = 'people/fetch_by_email/'
         order_fields = {
             'name',
             'city',
@@ -392,6 +412,8 @@ class Person(Resource, mixins.ReadWritable):
             'date_created',
             'date_modified',
         }
+
+    objects = PersonManager()
 
     id = fields.Integer()
     name = fields.String(required=True)
