@@ -12,7 +12,7 @@ Changelog
 
 - Add ``Lead`` resource (tizz98)
 
-The Distance Past
+The Distant Past
 -----------------
 
 Everything else happened before the maintainer kept a changelog.
