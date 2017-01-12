@@ -173,6 +173,9 @@ can be fetched using the resource's ``objects.get()`` method, or you can call
     steve.name
     >>> 'Steve Cognito'
 
+    # as a special case, People can be read by email as well as ID:
+    steve = Person.objects.get(email='steve@example.org')
+
 Update
 ------
 
