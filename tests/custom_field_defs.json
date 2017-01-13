@@ -1,0 +1,152 @@
+[
+  {
+    "available_on": [
+      "company",
+      "opportunity",
+      "person",
+      "project",
+      "task"
+    ],
+    "data_type": "MultiSelect",
+    "id": 1,
+    "name": "Custom Multiselect",
+    "options": [
+      {
+        "id": 100,
+        "name": "Multi Opt 1",
+        "rank": 0
+      },
+      {
+        "id": 101,
+        "name": "Multi Opt 2",
+        "rank": 1
+      },
+      {
+        "id": 102,
+        "name": "Multi Opt 3",
+        "rank": 2
+      }
+    ]
+  },
+  {
+    "available_on": [
+      "company",
+      "opportunity",
+      "person",
+      "project",
+      "task"
+    ],
+    "currency": "JPY",
+    "data_type": "Currency",
+    "id": 2,
+    "name": "Custom Currency"
+  },
+  {
+    "available_on": [
+      "company",
+      "opportunity",
+      "person",
+      "project",
+      "task"
+    ],
+    "data_type": "Percentage",
+    "id": 3,
+    "name": "Custom Percentage"
+  },
+  {
+    "available_on": [
+      "company",
+      "opportunity",
+      "person",
+      "project",
+      "task"
+    ],
+    "data_type": "URL",
+    "id": 4,
+    "name": "Custom URL"
+  },
+  {
+    "available_on": [
+      "company",
+      "opportunity",
+      "person",
+      "project",
+      "task"
+    ],
+    "data_type": "Float",
+    "id": 5,
+    "name": "Custom Number"
+  },
+  {
+    "available_on": [
+      "company",
+      "opportunity",
+      "person",
+      "project",
+      "task"
+    ],
+    "data_type": "Checkbox",
+    "id": 6,
+    "name": "Custom Checkbox"
+  },
+  {
+    "available_on": [
+      "company",
+      "opportunity",
+      "person",
+      "project",
+      "task"
+    ],
+    "data_type": "Date",
+    "id": 7,
+    "name": "Custom Date"
+  },
+  {
+    "available_on": [
+      "company",
+      "opportunity",
+      "person",
+      "project",
+      "task"
+    ],
+    "data_type": "Dropdown",
+    "id": 8,
+    "name": "Custom Dropdown",
+    "options": [
+      {
+        "id": 200,
+        "name": "Drop Opt 1",
+        "rank": 0
+      },
+      {
+        "id": 201,
+        "name": "Drop Opt 2",
+        "rank": 1
+      }
+    ]
+  },
+  {
+    "available_on": [
+      "company",
+      "opportunity",
+      "person",
+      "project",
+      "task"
+    ],
+    "data_type": "Text",
+    "id": 9,
+    "name": "Custom Text Area"
+  },
+  {
+    "available_on": [
+      "company",
+      "opportunity",
+      "person",
+      "project",
+      "task"
+    ],
+    "data_type": "String",
+    "id": 10,
+    "name": "Custom Text Field"
+  }
+]

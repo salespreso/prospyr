@@ -9,6 +9,7 @@ from arrow.parser import ParserError
 from marshmallow import ValidationError, fields
 from marshmallow.utils import missing as missing_
 from requests import codes
+from six import string_types
 
 from prospyr import exceptions
 from prospyr.util import encode_typename, import_dotted_path
@@ -85,6 +86,8 @@ class NestedResource(fields.Field):
 
     def __init__(self, resource_cls, default=missing_, many=False,
                  id_only=False, **kwargs):
+        if isinstance(resource_cls, string_types):
+            resource_cls = import_dotted_path(resource_cls)
         self.resource_cls = resource_cls
         self.schema = type(resource_cls.Meta.schema)
         self.many = many

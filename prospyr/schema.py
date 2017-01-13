@@ -93,3 +93,9 @@ class PipelineStageSchema(NamedTupleSchema):
     id = fields.Integer(required=True)
     name = fields.String(required=True)
     win_probability = fields.Integer()
+
+
+class OptionSchema(NamedTupleSchema):
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    rank = fields.Integer(required=True)

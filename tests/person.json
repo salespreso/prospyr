@@ -62,11 +62,11 @@
   "date_modified": 1434585439,
   "custom_fields": [
     {
-      "custom_field_definition_id": 123,
+      "custom_field_definition_id": 10,
       "value": "string value"
     },
     {
-      "custom_field_definition_id": 456,
+      "custom_field_definition_id": 7,
       "value": "06/20/2015"
     }
   ]

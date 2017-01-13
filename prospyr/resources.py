@@ -4,11 +4,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 from logging import getLogger
 
-from marshmallow import fields
-from marshmallow.validate import OneOf
 from requests import codes
 from six import string_types, with_metaclass
 
+from marshmallow import fields
+from marshmallow.validate import OneOf
 from prospyr import connection, exceptions, mixins, schema
 from prospyr.exceptions import ApiError, ProspyrException
 from prospyr.fields import NestedIdentifiedResource, NestedResource, Unix
@@ -393,6 +393,12 @@ class Company(Resource, mixins.ReadWritable):
     # TODO custom_fields = ...
     websites = fields.Nested(schema.WebsiteSchema, many=True)
 
+# TODO sucks
+try:
+    from prospyr import custom
+except:
+    raise
+
 
 class Person(Resource, mixins.ReadWritable):
 
@@ -441,6 +447,7 @@ class Person(Resource, mixins.ReadWritable):
     date_modified = Unix()
     # TODO custom_fields = ...
     websites = fields.Nested(schema.WebsiteSchema, many=True)
+    custom_fields = custom.CustomField(many=True)
 
 
 class LossReason(SecondaryResource, mixins.Readable):
