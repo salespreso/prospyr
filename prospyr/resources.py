@@ -236,8 +236,8 @@ class Resource(with_metaclass(ResourceMeta)):
         if errors:
             raise exceptions.ValidationError(
                 ('ProsperWorks delivered data which does not agree with the '
-                 'local Prospyr schema. This is probably a Prospyr bug. '
-                 'Errors encountered: %s' % repr(errors)),
+                 'local Prospyr schema for %s. This is probably a Prospyr '
+                 'bug. Errors encountered: %s' % (cls.__name__, repr(errors))),
                 raw_data=raw_data,
                 resource_cls=cls,
                 errors=errors,
