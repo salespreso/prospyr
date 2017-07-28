@@ -1,12 +1,14 @@
 from nose.tools import assert_raises
 
-from prospyr.resources import NoCollectionManager
+from prospyr.managers import NoCollectionManager
+from tests import reset_conns
 
 
 class FakeResource(object):
     objects = NoCollectionManager()
 
 
+@reset_conns
 def test_not_a_collection_manager():
     mgr = FakeResource.objects
 

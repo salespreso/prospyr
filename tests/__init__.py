@@ -9,7 +9,7 @@ from hashlib import sha256
 from random import random
 
 import mock
-from requests import Response
+from requests import Response, codes
 
 from prospyr.connection import _connections, connect
 
@@ -56,14 +56,59 @@ def make_cn_with_resp(method, status_code, content, name=None):
     return cn
 
 
-def make_cn_with_resps(url_map, name=None):
-    name = name or sha256(str(random()).encode()).hexdigest()
-    cn = connect(email='foo', token='bar', name=name)
+class MockSession(object):
+    """
+    A pretend Session that 200 OKs the content of `urls`.
 
-    def _get(url):
-        status, content = url_map[url]
+        conn.session = MockSession({
+            'https://google.com/search/': '{"foo": "bar"}'
+        })
+
+    A URL's content may also be a two-tuple of (status code, content)
+
+    Anything not in `urls` is 404 Not Founded.
+    """
+    def __init__(self, urls):
+        self.urls = urls
+
+    def _method(self, url, *args, **kwargs):
+        success = url in self.urls
+        content = self.urls.get(url, '')
+        if isinstance(content, tuple):
+            code, content = content
+        else:
+            code = codes.ok if success else codes.not_found
         resp = Response()
-        resp._content = content
-        resp.status_code = status
+        resp._content = content.encode('utf-8')
+        resp.status_code = code
         return resp
-    cn.get = _get
+
+    def get(self, url, *args, **kwargs):
+        return self._method(url, *args, **kwargs)
+
+    def post(self, url, *args, **kwargs):
+        return self._method(url, *args, **kwargs)
+
+    def put(self, url, *args, **kwargs):
+        return self._method(url, *args, **kwargs)
+
+    def delete(self, url, *args, **kwargs):
+        return self._method(url, *args, **kwargs)
+
+
+def make_cn_with_resps(urls, name='default'):
+    """
+    A connection that 200 OKs the content of `urls`.
+
+    A URL's content may also be a two-tuple of (status code, content)
+
+    Anything not in `urls` is 404 Not Founded.
+    """
+    cn = connect(email='foo', token='bar', name=name)
+    urls = {cn.build_absolute_url(p): r for p, r in urls.items()}
+    cn.session = MockSession(urls)
+    cn.get = mock.Mock(wraps=cn.get)
+    cn.post = mock.Mock(wraps=cn.post)
+    cn.put = mock.Mock(wraps=cn.put)
+    cn.delete = mock.Mock(wraps=cn.delete)
+    return cn

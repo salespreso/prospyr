@@ -10,7 +10,7 @@ from requests import Response, codes
 from prospyr import connect, exceptions
 from prospyr.resources import Person
 from prospyr.schema import EmailSchema
-from tests import load_fixture_json, reset_conns
+from tests import MockSession, load_fixture_json, reset_conns
 
 Email = EmailSchema().namedtuple_class
 
@@ -28,35 +28,12 @@ def assert_is_jon(alleged_jon):
     return True
 
 
-class MockSession(object):
-    """
-    A pretend Session that 200 OKs the content of `urls`.
-
-    Anything not in `urls` is 404 Not Founded.
-    """
-    def __init__(self, urls):
-        self.urls = urls
-
-    def _method(self, url, *args, **kwargs):
-        success = url in self.urls
-        content = self.urls.get(url, '')
-        resp = Response()
-        resp._content = content.encode('utf-8')
-        resp.status_code = codes.ok if success else codes.not_found
-        return resp
-
-    def get(self, url, *args, **kwargs):
-        return self._method(url, *args, **kwargs)
-
-    def post(self, url, *args, **kwargs):
-        return self._method(url, *args, **kwargs)
-
-
 @reset_conns
 def test_read():
     cn = connect(email='foo', token='bar')
     cn.session = MockSession(urls={
-        cn.build_absolute_url('people/1/'): load_fixture_json('person.json')
+        cn.build_absolute_url('people/1/'): load_fixture_json('person.json'),
+        cn.build_absolute_url('custom_field_definitions/'): load_fixture_json('custom_field_defs.json')  # noqa
     })
     jon = Person(id=1)
     jon.read()
@@ -110,7 +87,13 @@ def test_resource_validation():
         albert.validate()
 
 
+@reset_conns
 def test_construct_from_api_data():
+    cn = connect(email='foo', token='bar', name='default')
+    cn.session = MockSession(urls={
+        cn.build_absolute_url('custom_field_definitions/'): load_fixture_json('custom_field_defs.json')  # noqa
+    })
+
     data = json.loads(load_fixture_json('person.json'))
     jon = Person.from_api_data(data)
     assert_is_jon(jon)
