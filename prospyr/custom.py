@@ -1,14 +1,22 @@
+# -*- coding: utf-8 -*-
+"""
+Resources related to Custom Fields.
+"""
+
+from __future__ import absolute_import, print_function, unicode_literals
+
 from operator import attrgetter
 
 from marshmallow import fields
 from marshmallow.validate import OneOf, Range
 
-from prospyr import exceptions, mixins, schema
+from prospyr import exceptions, schema
 from prospyr.fields import Unix, normalise_many
-from prospyr.resources import Related, Resource, SecondaryResource
+from prospyr.resource_base import (Readable, Related, Resource,
+                                   SecondaryResource)
 
 
-class CustomFieldDefinition(SecondaryResource, mixins.Readable):
+class CustomFieldDefinition(SecondaryResource, Readable):
     """
     Model ProsperWorks' custom field definitions
 
