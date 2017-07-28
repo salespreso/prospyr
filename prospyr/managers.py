@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from requests import codes
 
 from prospyr import connection
@@ -88,14 +90,17 @@ class ListOnlyManager(Manager):
     URLs. The get() method is simulated. filtering and ordering is disabled.
     """
 
-    _results_by_id = None
     _search_cls = ListSet
+    _cache = defaultdict(dict)
 
     def results_by_id(self, force_refresh=False):
-        if self._results_by_id is None or force_refresh is True:
+        # must key by resource because manager may be shared
+        cache = self._cache[self.resource_cls]
+
+        if not cache or force_refresh is True:
             rs = self.all()
-            self._results_by_id = {r.id: r for r in rs}
-        return self._results_by_id
+            cache.update({r.id: r for r in rs})
+        return cache
 
     def get(self, id):
         result = self.results_by_id().get(id)
