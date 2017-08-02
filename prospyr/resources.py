@@ -693,6 +693,27 @@ class Account(Resource, mixins.Singleton):
     name = fields.String()
 
 
+class Webhook(Resource, mixins.Readable):
+
+    class Meta(object):
+        list_path = 'webhooks/'
+        detail_path = 'webhooks/{id}/'
+
+    objects = ListOnlyManager()
+
+    id = fields.Integer()
+    target = fields.String(required=True)
+    event = fields.String(validate=OneOf(choices=('new', 'update', 'delete')))
+    type = fields.String(validate=OneOf(
+        choices=('lead', 'project', 'task', 'opportunity', 'company', 'person')
+    ))
+    secret = fields.Dict(allow_none=True)
+    date_created = Unix()
+
+    def __str__(self):
+        return '%s.%s -> %s' % (self.type, self.event, self.target)
+
+
 class Placeholder(object):
     """
     Stand-in for Prosperworks resources that Prospyr does not yet model.
