@@ -692,6 +692,7 @@ class Account(Resource, mixins.Singleton):
     id = fields.Integer()
     name = fields.String()
 
+
 class Webhook(Resource, mixins.Readable):
 
     class Meta(object):
@@ -703,7 +704,9 @@ class Webhook(Resource, mixins.Readable):
     id = fields.Integer()
     target = fields.String(required=True)
     event = fields.String(validate=OneOf(choices=('new', 'update', 'delete')))
-    type = fields.String(validate=OneOf(choices=('lead', 'project', 'task', 'opportunity', 'company', 'person' )))
+    type = fields.String(validate=OneOf(
+        choices=('lead', 'project', 'task', 'opportunity', 'company', 'person')
+    ))
     secret = fields.Dict(allow_none=True)
     date_created = Unix()
 
