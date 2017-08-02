@@ -707,6 +707,10 @@ class Webhook(Resource, mixins.Readable):
     secret = fields.Dict(allow_none=True)
     date_created = Unix()
 
+    def __str__(self):
+        return '%s.%s -> %s' % (self.type, self.event, self.target)
+
+
 class Placeholder(object):
     """
     Stand-in for Prosperworks resources that Prospyr does not yet model.
