@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.8.0
+-----
+
+- Add ``Webhook`` resource (read-only) (soccernee)
+
 0.7.0
 -----
 
